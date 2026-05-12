@@ -1,0 +1,96 @@
+{
+  "info": {
+    "name": "Nirmaan Local API - Smoke Tests",
+    "_postman_id": "e9f3c5b1-0000-4000-8000-000000000001",
+    "description": "Collection of quick smoke tests for the local Nirmaan backend (http://localhost:5000)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /api/health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET /api/media",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/media",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","media"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET /api/attendance/summary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/attendance/summary",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","attendance","summary"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/attendance/check-in",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Automated Tester\",\n  \"nirmaanId\": \"AUTO123\",\n  \"status\": \"Present\",\n  \"centerId\": \"test-center\",\n  \"centerName\": \"Test Center\",\n  \"city\": \"TestCity\",\n  \"state\": \"TestState\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/attendance/check-in",
+          "host": ["{{baseUrl}}"],
+          "path": ["api","attendance","check-in"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/auth/request-otp",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"tester@example.com\",\n  \"role\": \"student\",\n  \"deliveryMethod\": \"email\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/request-otp", "host": ["{{baseUrl}}"], "path": ["api","auth","request-otp"] }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/auth/verify-otp (example)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"tester@example.com\",\n  \"role\": \"student\",\n  \"otp\": \"123456\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["api","auth","verify-otp"] }
+      },
+      "response": []
+    }
+  ]
+}

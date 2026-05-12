@@ -1,0 +1,16 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/nirmaan_exam.org/.venv/Scripts/python.exe",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true
+  },
+  "python.analysis.include": [
+    "${workspaceFolder}/nirmaan_exam.org"
+  ],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/nirmaan_exam.org/.venv/Lib/site-packages"
+  ]
+}

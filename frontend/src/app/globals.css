@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f3eb;
+  --surface: #fff8ec;
+  --surface-2: #f0e3cf;
+  --text: #1f1a11;
+  --muted: #645b4a;
+  --brand: #cb5f23;
+  --brand-2: #1f7a8c;
+  --outline: #d8c7ad;
+}
+
+@theme inline {
+  --font-sans: var(--font-body);
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 20%, rgba(203, 95, 35, 0.13), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(31, 122, 140, 0.15), transparent 26%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display), sans-serif;
+}
+
+.dark {
+  --bg: #14120f;
+  --surface: #201b15;
+  --surface-2: #30261e;
+  --text: #f5edd9;
+  --muted: #b9aa8f;
+  --brand: #f28f52;
+  --brand-2: #5dc1d6;
+  --outline: #4f3f31;
+}
+
+.section {
+  @apply mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24;
+}
+
+.glass {
+  @apply rounded-2xl border shadow-sm;
+  border-color: var(--outline);
+  background: color-mix(in oklab, var(--surface) 90%, transparent);
+}
+
+/* Utility classes for dynamic styled components */
+/* Note: backgroundColor and width properties are set via inline styles for data-driven values */
+
+.status-badge {
+  @apply rounded-full px-3 py-1 text-xs font-semibold text-white;
+}
+
+.progress-bar-fill {
+  @apply h-full rounded-full bg-gradient-to-r from-sky-400 to-emerald-400;
+}
+
+.map-pin-wrapper {
+  @apply absolute flex items-center justify-center;
+}
+
+.map-pin-circle {
+  @apply relative flex h-5 w-5 items-center justify-center rounded-full;
+}
+
+.map-pin-pulse {
+  @apply absolute h-9 w-9 animate-ping rounded-full opacity-20;
+}
+
+.status-badge-healthy {
+  background-color: #16a34a;
+}
+
+.status-badge-attention {
+  background-color: #d97706;
+}
+
+.status-badge-offline {
+  background-color: #334155;
+}
+
+.map-pin-healthy {
+  background-color: #16a34a;
+}
+
+.map-pin-attention {
+  background-color: #d97706;
+}
+
+.map-pin-offline {
+  background-color: #334155;
+}
+
+.map-pin-bhubaneswar {
+  left: 64.5%;
+  top: 48.5%;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-delhi {
+  left: 55%;
+  top: 21.5%;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-mumbai {
+  left: 43%;
+  top: 60.5%;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-bengaluru {
+  left: 49.5%;
+  top: 73%;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-hyderabad {
+  left: 54%;
+  top: 63%;
+  transform: translate(-50%, -50%);
+}
+
+.map-pin-kolkata {
+  left: 68%;
+  top: 40.5%;
+  transform: translate(-50%, -50%);
+}
+
+.progress-width-0 { width: 0%; }
+.progress-width-5 { width: 5%; }
+.progress-width-10 { width: 10%; }
+.progress-width-15 { width: 15%; }
+.progress-width-20 { width: 20%; }
+.progress-width-25 { width: 25%; }
+.progress-width-30 { width: 30%; }
+.progress-width-35 { width: 35%; }
+.progress-width-40 { width: 40%; }
+.progress-width-45 { width: 45%; }
+.progress-width-50 { width: 50%; }
+.progress-width-55 { width: 55%; }
+.progress-width-60 { width: 60%; }
+.progress-width-65 { width: 65%; }
+.progress-width-70 { width: 70%; }
+.progress-width-75 { width: 75%; }
+.progress-width-80 { width: 80%; }
+.progress-width-85 { width: 85%; }
+.progress-width-90 { width: 90%; }
+.progress-width-95 { width: 95%; }
+.progress-width-100 { width: 100%; }

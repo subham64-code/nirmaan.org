@@ -1,0 +1,48 @@
+type User @table {
+  username: String!
+  passwordHash: String!
+  role: String!
+  createdAt: Timestamp!
+  email: String
+  profilePictureUrl: String
+}
+
+type StudentApplication @table {
+  applicant: User
+  firstName: String!
+  lastName: String!
+  dateOfBirth: Date!
+  applicationDate: Timestamp!
+  status: String!
+  address: String
+  phone: String
+  email: String
+  photoUrl: String
+}
+
+type Qualification @table {
+  studentApplication: StudentApplication
+  student: User
+  degreeOrCertificate: String!
+  institutionName: String!
+  yearOfCompletion: Int!
+  majorSubject: String
+  gradeOrPercentage: String
+}
+
+type Question @table {
+  questionText: String!
+  questionType: String!
+  createdAt: Timestamp!
+  options: String
+  correctAnswer: String
+}
+
+type AssessmentResult @table {
+  student: User
+  question: Question
+  assessmentName: String!
+  score: Int!
+  dateTaken: Date!
+  feedback: String
+}

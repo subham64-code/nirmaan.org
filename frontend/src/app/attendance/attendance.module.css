@@ -1,0 +1,24 @@
+/* Dynamic status badge - backgroundColor set via inline style for data-driven colors */
+.statusBadge {
+  @apply rounded-full px-3 py-1 text-xs font-semibold text-white;
+}
+
+/* Attendance progress bar - width set via inline style for data-driven percentages */
+.progressBar {
+  @apply h-full rounded-full bg-gradient-to-r from-sky-400 to-emerald-400;
+}
+
+/* Map center pin container - position set via inline style for mapped coordinates */
+.mapPin {
+  @apply absolute flex items-center justify-center;
+}
+
+/* Map center indicator circle */
+.mapPinCircle {
+  @apply relative flex h-5 w-5 items-center justify-center rounded-full;
+}
+
+/* Animated ping effect for map pins */
+.mapPinPulse {
+  @apply absolute h-9 w-9 animate-ping rounded-full opacity-20;
+}

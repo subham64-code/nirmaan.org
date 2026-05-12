@@ -1,0 +1,70 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This is seed data and can be exposed to the public.") {
+  user_insertMany(data: [
+    {
+      id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      username: "student_user",
+      passwordHash: "hashed_password_student",
+      role: "student",
+      createdAt: "2024-01-01T10:00:00Z",
+      email: "student@example.com"
+    },
+    {
+      id: "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12",
+      username: "instructor_user",
+      passwordHash: "hashed_password_instructor",
+      role: "instructor",
+      createdAt: "2024-01-01T10:05:00Z",
+      email: "instructor@example.com"
+    }
+  ])
+  question_insertMany(data: [
+    {
+      id: "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+      questionText: "What is 2 + 2?",
+      questionType: "multiple_choice",
+      options: "['3', '4', '5']",
+      correctAnswer: "4",
+      createdAt: "2024-01-02T11:00:00Z"
+    },
+    {
+      id: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
+      questionText: "What is the capital of France?",
+      questionType: "short_answer",
+      correctAnswer: "Paris",
+      createdAt: "2024-01-02T11:05:00Z"
+    }
+  ])
+  studentApplication_insertMany(data: [
+    {
+      id: "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15",
+      applicantId: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      firstName: "John",
+      lastName: "Doe",
+      dateOfBirth: "2000-05-15",
+      applicationDate: "2024-03-10T09:30:00Z",
+      status: "pending",
+      email: "john.doe@example.com"
+    }
+  ])
+  qualification_insertMany(data: [
+    {
+      id: "f0eebc99-9c0b-4ef8-bb6d-6bb9bd380a16",
+      studentApplicationId: "e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a15",
+      studentId: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      degreeOrCertificate: "High School Diploma",
+      institutionName: "Central High",
+      yearOfCompletion: 2018
+    }
+  ])
+  assessmentResult_insertMany(data: [
+    {
+      id: "10eebc99-9c0b-4ef8-bb6d-6bb9bd380a17",
+      studentId: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      questionId: "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+      assessmentName: "Math Quiz",
+      score: 100,
+      dateTaken: "2024-03-15",
+      feedback: "Great job!"
+    }
+  ])
+}

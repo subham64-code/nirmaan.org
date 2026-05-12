@@ -1,0 +1,31 @@
+mutation CreateNewUser($username: String!, $passwordHash: String!, $role: String!, $email: String) @auth(level: USER, insecureReason: "New users are created by an authenticated user, typically an admin or through a self-registration process that's handled securely.") {
+  user_insert(data: {
+    username: $username,
+    passwordHash: $passwordHash,
+    role: $role,
+    createdAt_expr: "request.time",
+    email: $email
+  })
+}
+
+query GetAllQuestions @auth(level: PUBLIC, insecureReason: "Questions are public content and do not expose sensitive user data.") {
+  questions {
+    id
+    questionText
+    questionType
+    options
+    correctAnswer
+    createdAt
+  }
+}
+
+mutation UpdateStudentApplicationStatus($applicationId: UUID!, $newStatus: String!) @auth(level: USER, insecureReason: "Updating a student application requires authentication and is managed by authorized personnel.") {
+  studentApplication_update(
+    key: { id: $applicationId },
+    data: { status: $newStatus }
+  )
+}
+
+mutation DeleteAssessmentResult($assessmentId: UUID!) @auth(level: USER, insecureReason: "Deleting an assessment result should only be possible for authenticated users with appropriate permissions.") {
+  assessmentResult_delete(key: { id: $assessmentId })
+}
