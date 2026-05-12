@@ -1,1 +1,12 @@
 node_modules
+.env
+.env.local
+.env.production
+backend/.env
+*.log
+flask_session/
+firebase/
+QRCode-Smart-Attendance-System-with-Geolocation/
+nirmaan_exam.org/
+docs/BACKEND_PIPELINE.md
+docs/DEPLOYMENT_PIPELINE.md
