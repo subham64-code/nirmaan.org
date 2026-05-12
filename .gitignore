@@ -10,3 +10,6 @@ QRCode-Smart-Attendance-System-with-Geolocation/
 nirmaan_exam.org/
 docs/BACKEND_PIPELINE.md
 docs/DEPLOYMENT_PIPELINE.md
+frontend/public/attendance-media/*.mp4
+frontend/public/attendance-media/*.avi
+frontend/public/attendance-media/*.mov
