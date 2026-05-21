@@ -29,7 +29,8 @@ router.get("/student/:studentId", auth(["student", "teacher", "admin"]), async (
   return ok(res, records);
 });
 
-router.post("/check-in", async (req, res) => {
+// Authenticated check-in route (for logged-in students)
+router.post("/check-in", auth(["student", "teacher", "admin"]), async (req, res) => {
   const {
     name,
     nirmaanId,
@@ -50,8 +51,12 @@ router.post("/check-in", async (req, res) => {
     source = "web",
   } = req.body || {};
 
-  if (!name || !String(name).trim()) {
-    return fail(res, 400, "name is required");
+  // Validate user role - students can only check in themselves
+  const userId = req.user.sub;
+  const userRole = req.user.role;
+
+  if (userRole === "student" && !name) {
+    return fail(res, 400, "name is required for student check-in");
   }
 
   if (!["Present", "Absent", "Late", "Excused"].includes(status)) {
@@ -59,9 +64,11 @@ router.post("/check-in", async (req, res) => {
   }
 
   const dateKey = new Date().toISOString().slice(0, 10);
-  const cleanName = String(name).trim();
-  const cleanNirmaanId = nirmaanId ? String(nirmaanId).trim() : "";
-  const checkInKey = `${cleanNirmaanId || cleanName}-${dateKey}-${centerId || "general"}`.toLowerCase();
+  const cleanName = String(name).trim() || req.user.name || "Unknown";
+  const cleanNirmaanId = nirmaanId ? String(nirmaanId).trim() : (req.user.nirmaanId || "");
+
+  // Use userId as the primary identifier
+  const checkInKey = `${userId}-${dateKey}-${centerId || "general"}`.toLowerCase();
 
   const record = await AttendanceCheckIn.findOneAndUpdate(
     { checkInKey },
@@ -69,6 +76,7 @@ router.post("/check-in", async (req, res) => {
       checkInKey,
       name: cleanName,
       nirmaanId: cleanNirmaanId,
+      userId, // Always include userId for authenticated users
       status,
       centerId,
       centerName,
@@ -86,6 +94,8 @@ router.post("/check-in", async (req, res) => {
       source,
       dateKey,
       checkInAt: new Date(),
+      userRole, // Log the user role
+      verified: true, // AUTO-CHECKED / AUTO-VERIFIED BY DEFAULT
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
@@ -175,6 +185,7 @@ router.post("/self-checkin", auth(["student"]), async (req, res) => {
         checkInAt: new Date(),
         note,
         source: "student-portal",
+        verified: true, // AUTO-CHECKED / AUTO-VERIFIED BY DEFAULT
       },
       { upsert: true, new: true }
     );
@@ -228,14 +239,20 @@ router.get("/my-attendance", auth(["student"]), async (req, res) => {
 router.get("/report", auth(["teacher", "admin"]), async (req, res) => {
   try {
     const { date, centerId, status } = req.query;
+    const userRole = req.user.role;
     
     let query = {};
     if (date) query.dateKey = date;
     if (centerId) query.centerId = centerId;
     if (status) query.status = status;
 
+    // Teachers can only see their own center's records
+    if (userRole === "teacher") {
+      query.teacherId = req.user.sub;
+    }
+
     const records = await AttendanceCheckIn.find(query)
-      .populate("userId", "name email")
+      .populate("userId", "name email nirmaanId")
       .sort({ checkInAt: -1 });
 
     return ok(res, records, "Attendance report retrieved");
@@ -552,6 +569,147 @@ router.post("/:recordId/verify", auth(["teacher", "admin"]), async (req, res) =>
   } catch (error) {
     console.error("Attendance verification error:", error);
     return fail(res, 500, "Failed to verify attendance");
+  }
+});
+
+// Auto-verify pending attendance in bulk (useful after imports/uploads)
+router.post("/verify/pending", auth(["teacher", "admin"]), async (req, res) => {
+  try {
+    const dateKey = req.body?.dateKey || new Date().toISOString().slice(0, 10);
+    const result = await AttendanceCheckIn.updateMany(
+      { dateKey, verified: { $ne: true } },
+      {
+        $set: {
+          verified: true,
+          verificationApprovedBy: req.user.sub,
+          verificationApprovedAt: new Date(),
+        },
+      }
+    );
+
+    await logAction(req.user.sub, "attendance.verify.bulk", {
+      dateKey,
+      modifiedCount: result.modifiedCount || 0,
+    });
+
+    return ok(res, { dateKey, modifiedCount: result.modifiedCount || 0 }, "Pending attendance auto-verified");
+  } catch (error) {
+    console.error("Bulk verify error:", error);
+    return fail(res, 500, "Failed to auto-verify attendance");
+  }
+});
+
+// Trigger automated alerts for low attendance (< 75%)
+router.post("/alert/low-attendance", auth(["admin", "teacher"]), async (req, res) => {
+  try {
+    const { threshold = 75 } = req.body;
+    
+    const User = require("../models/User");
+    const Notification = require("../models/Notification");
+    
+    const students = await User.find({ role: "student" });
+    const currentDate = new Date();
+    const queryMonth = currentDate.getMonth() + 1;
+    const queryYear = currentDate.getFullYear();
+    const startDate = `${queryYear}-${String(queryMonth).padStart(2, '0')}-01`;
+    const endDate = `${queryYear}-${String(queryMonth).padStart(2, '0')}-31`;
+
+    let alertsSent = 0;
+
+    for (const student of students) {
+      const records = await AttendanceCheckIn.find({
+        $or: [{ userId: student._id }, { nirmaanId: student.nirmaanId }, { name: student.name }],
+        dateKey: { $gte: startDate, $lte: endDate }
+      });
+
+      if (records.length > 0) {
+        const total = records.length;
+        const present = records.filter(r => r.status === "Present").length;
+        const percentage = Math.round((present / total) * 100);
+
+        if (percentage < threshold) {
+          // Check if an alert was already sent recently
+          const recentAlert = await Notification.findOne({
+            userId: student._id,
+            category: "attendance_alert",
+            createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Last 7 days
+          });
+
+          if (!recentAlert) {
+            await Notification.create({
+              userId: student._id,
+              title: "Low Attendance Warning",
+              message: `Your attendance is currently at ${percentage}%, which is below the required threshold of ${threshold}%. Please ensure regular attendance.`,
+              type: "warning",
+              category: "attendance_alert"
+            });
+            alertsSent++;
+          }
+        }
+      }
+    }
+
+    return ok(res, { alertsSent }, `Sent ${alertsSent} low attendance alerts`);
+  } catch (error) {
+    console.error("Low attendance alert error:", error);
+    return fail(res, 500, "Failed to process attendance alerts");
+  }
+});
+
+// Bulk import attendance (e.g. from Google Sheets)
+router.post("/bulk-import", auth(["admin", "teacher"]), async (req, res) => {
+  try {
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return fail(res, 400, "Valid records array is required");
+    }
+
+    const operations = records.map(record => {
+      const { name, nirmaanId, status, dateKey, centerId = "google-sheets" } = record;
+      const cleanName = String(name || "").trim();
+      const cleanId = String(nirmaanId || "").trim();
+      const checkInKey = `${cleanId || cleanName}-${dateKey}-${centerId}`.toLowerCase();
+
+      return {
+        updateOne: {
+          filter: { checkInKey },
+          update: {
+            $set: {
+              checkInKey,
+              name: cleanName,
+              nirmaanId: cleanId,
+              status: status || "Present",
+              dateKey,
+              centerId,
+              centerName: "Google Sheets Import",
+              source: "bulk-import",
+              verified: true,
+              verificationApprovedBy: req.user.sub,
+              verificationApprovedAt: new Date(),
+              checkInAt: new Date(),
+            }
+          },
+          upsert: true
+        }
+      };
+    });
+
+    const result = await AttendanceCheckIn.bulkWrite(operations);
+    
+    await logAction(req.user.sub, "attendance.bulk_import", { 
+      count: records.length,
+      upsertedCount: result.upsertedCount,
+      modifiedCount: result.modifiedCount
+    });
+
+    return ok(res, {
+      received: records.length,
+      upserted: result.upsertedCount,
+      modified: result.modifiedCount
+    }, "Bulk attendance import successful");
+  } catch (error) {
+    console.error("Bulk import error:", error);
+    return fail(res, 500, "Failed to process bulk import: " + error.message);
   }
 });
 

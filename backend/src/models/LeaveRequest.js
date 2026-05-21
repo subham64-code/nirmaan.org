@@ -4,7 +4,7 @@ const leaveRequestSchema = new mongoose.Schema(
   {
     studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     studentName: { type: String, required: true },
-    nirmaanId: { type: String, required: true, index: true },
+    nirmaanId: { type: String, required: false, index: true },
     course: { type: String, default: "" },
     leaveDate: { type: Date, required: true, index: true },
     returnDate: { type: Date, default: null },

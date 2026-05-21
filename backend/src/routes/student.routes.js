@@ -11,6 +11,31 @@ const logAction = require("../utils/logAction");
 
 const router = express.Router();
 
+router.get("/predefined", async (_req, res) => {
+  try {
+    const users = await User.find({ role: "student", isApproved: true })
+      .select("name email nirmaanId qualification course")
+      .sort({ name: 1 })
+      .limit(500);
+
+    const students = users.map((row, index) => ({
+      id: row.nirmaanId || `STU${String(index + 1).padStart(3, "0")}`,
+      name: row.name,
+      email: row.email,
+      nirmaanId: row.nirmaanId || "",
+      course: row.course || "AI/ML",
+      qualification: row.qualification || "-",
+      status: "approved",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}&background=4F46E5&color=fff&size=128`,
+    }));
+
+    return ok(res, students, "Approved students directory loaded");
+  } catch (error) {
+    console.error("Predefined students error:", error);
+    return fail(res, 500, "Failed to load students");
+  }
+});
+
 router.get("/me", auth(["student", "admin", "teacher"]), async (req, res) => {
   const user = await User.findById(req.user.sub).select("-passwordHash");
   const attendance = await Attendance.find({ student: req.user.sub });

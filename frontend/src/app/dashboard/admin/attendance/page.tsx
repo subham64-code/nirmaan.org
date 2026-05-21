@@ -13,11 +13,11 @@ export default function AttendanceSyncPage() {
 
   const syncFromSheet = async () => {
     try {
-      const response = await api.get("/services/sheet-sync", { headers: authHeader(token) });
-      setPreview(response.data.data.preview);
-      setMessage("Google Sheet synced! Preview shown below.");
-    } catch {
-      setMessage("Sync failed. Check Google Sheet URL in .env");
+      const response = await api.post("/services/sheet-sync", {}, { headers: authHeader(token) });
+      setPreview(JSON.stringify(response.data.data, null, 2));
+      setMessage("Google Sheet synced! Data imported to database.");
+    } catch (err: any) {
+      setMessage("Sync failed: " + (err.response?.data?.message || err.message));
     }
   };
 

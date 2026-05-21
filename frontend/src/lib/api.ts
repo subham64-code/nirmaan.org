@@ -8,14 +8,27 @@ export const api = axios.create({
   },
 });
 
-// Add request interceptor for debugging
+// Add request interceptor for debugging and URL normalization
 api.interceptors.request.use(
   (config) => {
+    // Normalize URL: remove leading slash to ensure it appends to baseURL correctly
+    if (config.url && config.url.startsWith('/')) {
+      config.url = config.url.substring(1);
+    }
+
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("nirmaan_token");
       if (token && !config.headers?.Authorization) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    // If sending FormData, let the browser set Content-Type (including boundary)
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        // Remove any preset content-type so browser can add multipart/form-data with boundary
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
       }
     }
     console.log('API Request:', config.method?.toUpperCase(), config.url);
@@ -50,3 +63,14 @@ api.interceptors.response.use(
 export function authHeader(token?: string) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+export function getMediaUrl(url?: string | null): string {
+  if (!url || url === "[object FileList]") return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  const backendBase = apiUrl.replace(/\/api$/, "");
+  return `${backendBase}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+

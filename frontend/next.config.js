@@ -6,7 +6,15 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   outputFileTracingRoot: path.resolve(__dirname, '..'),
-  allowedDevOrigins: ['http://localhost:3000', 'http://10.187.92.96:3000'],
+  // Allowed dev origins for loading _next assets when accessed from LAN devices.
+  // Add your local network origin (including port) if you access the dev server remotely.
+  allowedDevOrigins: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://10.187.92.96:3000',
+    'http://172.16.5.219:3001',
+    'http://172.16.5.219:3000'
+  ],
   
   // Image optimization
   images: {
@@ -52,7 +60,9 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), autoplay=(), encrypted-media=()',
+            value: process.env.NODE_ENV === 'development' 
+              ? 'camera=(), microphone=(), autoplay=(), encrypted-media=()'
+              : 'camera=(), microphone=(), geolocation=(), autoplay=(), encrypted-media=()',
           },
         ],
       },

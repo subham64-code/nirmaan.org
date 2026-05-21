@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import { api, getMediaUrl } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Mail, Phone, Briefcase, Calendar, AlertCircle } from "lucide-react";
 
@@ -28,24 +28,34 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userPicture, setUserPicture] = useState<string | null>(null);
+  const token = typeof window !== "undefined" ? localStorage.getItem("nirmaan_token") : "";
 
   useEffect(() => {
-    // Check if user has an OAuth profile picture
-    const picture = typeof window !== "undefined" ? localStorage.getItem("nirmaan_user_picture") : null;
-    if (picture) {
-      setUserPicture(picture);
+    // Check if user has a stored profile picture from OAuth
+    if (typeof window !== "undefined") {
+      const picture = localStorage.getItem("nirmaan_user_picture");
+      if (picture) {
+        setUserPicture(picture);
+      }
     }
     fetchTeacherProfile();
-  }, [teacherName]);
+  }, [teacherName, token]);
 
   const fetchTeacherProfile = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      
       const response = await api.get(`/faculty/name/${encodeURIComponent(teacherName)}`);
       
       if (response.data.success) {
-        setFaculty(response.data.data);
+        const facultyData = response.data.data;
+        setFaculty(facultyData);
+        
+        // Use faculty photo if available, otherwise use stored user picture
+        if (facultyData.photo) {
+          setUserPicture(facultyData.photo);
+        }
       } else {
         setError("Teacher profile not found");
       }
@@ -64,7 +74,7 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
         animate={{ opacity: 1 }}
         className="flex items-center justify-center p-4"
       >
-        <div className="animate-pulse">Loading profile...</div>
+        <div className="animate-pulse text-gray-500">Loading profile...</div>
       </motion.div>
     );
   }
@@ -74,7 +84,7 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-lg"
+        className="flex items-center gap-2 text-yellow-600 bg-yellow-50 p-3 rounded-lg border border-yellow-100"
       >
         <AlertCircle size={18} />
         <span className="text-sm">{error || "Profile not available"}</span>
@@ -87,18 +97,21 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200"
+        className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-slate-800 rounded-lg border border-blue-200 dark:border-slate-700"
       >
         {(userPicture || faculty?.photo) && (
           <img
-            src={userPicture || faculty!.photo}
+            src={getMediaUrl(userPicture || faculty!.photo)}
             alt={faculty?.name || teacherName}
-            className="w-10 h-10 rounded-full object-cover border-2 border-blue-300"
+            className="w-10 h-10 rounded-full object-cover border-2 border-blue-300 dark:border-blue-700"
+            onError={(e) => {
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${faculty?.name}`;
+            }}
           />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{faculty?.name || teacherName}</p>
-          <p className="text-xs text-gray-600 truncate">{faculty?.designation || "Teacher"}</p>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{faculty?.name || teacherName}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{faculty?.designation || "Faculty"}</p>
         </div>
       </motion.div>
     );
@@ -106,67 +119,63 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6 shadow-lg"
+      className="glass rounded-2xl p-6 space-y-4"
     >
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        {/* Photo Section */}
+      {/* Header with photo */}
+      <div className="flex items-start gap-4">
         {(userPicture || faculty?.photo) && (
-          <div className="flex-shrink-0">
-            <img
-              src={userPicture || faculty!.photo}
-              alt={faculty?.name || teacherName}
-              className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl object-cover border-4 border-blue-300 shadow-md hover:shadow-lg transition-shadow"
-            />
-          </div>
+          <img
+            src={getMediaUrl(userPicture || faculty!.photo)}
+            alt={faculty?.name || teacherName}
+            className="w-20 h-20 rounded-full object-cover border-2 border-[var(--brand)]"
+            onError={(e) => {
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${faculty?.name}`;
+            }}
+          />
         )}
-
-        {/* Info Section */}
-        <div className="flex-1 text-center sm:text-left">
-          <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{faculty.name}</h3>
-          <p className="text-lg text-blue-600 font-semibold mb-4 flex items-center justify-center sm:justify-start gap-2">
-            <Briefcase size={20} />
-            {faculty.designation}
-          </p>
-
-          {faculty.bio && (
-            <p className="text-gray-700 mb-4 leading-relaxed">{faculty.bio}</p>
+        <div className="flex-1">
+          <h3 className="text-xl font-bold">{faculty?.name || teacherName}</h3>
+          <p className="text-sm text-[var(--muted)] capitalize">{faculty?.designation}</p>
+          {faculty?.department && (
+            <p className="text-xs text-[var(--muted)] mt-1">Department: {faculty.department}</p>
           )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            {faculty.email && (
-              <div className="flex items-center gap-2 text-gray-700">
-                <Mail size={18} className="text-blue-500" />
-                <a href={`mailto:${faculty.email}`} className="hover:text-blue-600 break-all">
-                  {faculty.email}
-                </a>
-              </div>
-            )}
-
-            {faculty.phone && (
-              <div className="flex items-center gap-2 text-gray-700">
-                <Phone size={18} className="text-blue-500" />
-                <a href={`tel:${faculty.phone}`} className="hover:text-blue-600">
-                  {faculty.phone}
-                </a>
-              </div>
-            )}
-
-            {faculty.department && (
-              <div className="flex items-center gap-2 text-gray-700">
-                <Briefcase size={18} className="text-blue-500" />
-                <span>{faculty.department}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 text-gray-700">
-              <Calendar size={18} className="text-blue-500" />
-              <span>Joined {new Date(faculty.joinDate).toLocaleDateString()}</span>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Contact Info */}
+      <div className="space-y-2 pt-4 border-t border-[var(--outline)]">
+        {faculty?.email && (
+          <div className="flex items-center gap-2 text-sm">
+            <Mail size={16} className="text-[var(--brand)]" />
+            <a href={`mailto:${faculty.email}`} className="text-blue-600 hover:underline">
+              {faculty.email}
+            </a>
+          </div>
+        )}
+        {faculty?.phone && (
+          <div className="flex items-center gap-2 text-sm">
+            <Phone size={16} className="text-[var(--brand)] flex-shrink-0" />
+            <a href={`tel:${faculty.phone}`} className="text-blue-600 hover:underline">
+              {faculty.phone}
+            </a>
+          </div>
+        )}
+        {faculty?.joinDate && (
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar size={16} className="text-[var(--brand)]" />
+            <span>Joined: {new Date(faculty.joinDate).toLocaleDateString()}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Bio */}
+      {faculty?.bio && (
+        <div className="pt-4 border-t border-[var(--outline)]">
+          <p className="text-sm text-[var(--muted)] leading-relaxed">{faculty.bio}</p>
+        </div>
+      )}
     </motion.div>
   );
 }

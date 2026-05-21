@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
-import { Users, Mail, CheckCircle, AlertCircle, GraduationCap } from "lucide-react";
+import { Users, Mail, CheckCircle, AlertCircle, GraduationCap, ShieldCheck, ShieldX } from "lucide-react";
 import { gsap } from "gsap";
 import GoogleOAuthButton from "./GoogleOAuthButton";
 
@@ -79,6 +79,8 @@ export default function TeacherLoginWithID() {
     setEmail(teacher.email);
     setTeacherId(teacher.id);
     setStep("otp");
+    // Trigger OTP request automatically
+    requestOTP(teacher);
   };
 
   const handleOTPLogin = async () => {
@@ -94,6 +96,7 @@ export default function TeacherLoginWithID() {
       const response = await api.post("/auth/verify-otp", {
         email: selectedTeacher.email,
         otp,
+        name: selectedTeacher.name,
         role: "teacher"
       });
 
@@ -102,6 +105,7 @@ export default function TeacherLoginWithID() {
         localStorage.setItem("nirmaan_token", token);
         localStorage.setItem("nirmaan_user", JSON.stringify(user));
         localStorage.setItem("nirmaan_user_name", user.name || user.email);
+        localStorage.setItem("nirmaan_role", "teacher");
 
         setMessage("✅ Login successful! Redirecting...");
         setTimeout(() => {
@@ -117,8 +121,9 @@ export default function TeacherLoginWithID() {
     }
   };
 
-  const requestOTP = async () => {
-    if (!selectedTeacher) {
+  const requestOTP = async (teacherObj?: Teacher) => {
+    const targetTeacher = teacherObj || selectedTeacher;
+    if (!targetTeacher) {
       setMessage("Please select a teacher first");
       return;
     }
@@ -128,13 +133,15 @@ export default function TeacherLoginWithID() {
 
     try {
       const response = await api.post("/auth/request-otp", {
-        email: selectedTeacher.email,
+        email: targetTeacher.email,
         role: "teacher",
+        name: targetTeacher.name,
         deliveryMethod: "email"
       });
 
       if (response.data.success) {
-        setMessage("✅ OTP sent to your email! Check your inbox.");
+        const target = response.data?.data?.target || "registered contact";
+        setMessage(`✅ OTP sent successfully! Delivery target: ${target}. Please check your registered email or SMS inbox.`);
       } else {
         setMessage("❌ Failed to send OTP. Please try again.");
       }
@@ -154,6 +161,7 @@ export default function TeacherLoginWithID() {
     localStorage.setItem("nirmaan_user", JSON.stringify(user));
     localStorage.setItem("nirmaan_user_name", user.name || user.email);
     localStorage.setItem("nirmaan_user_picture", user.picture || "");
+    localStorage.setItem("nirmaan_role", "teacher");
 
     setMessage("✅ OAuth login successful! Redirecting...");
     setTimeout(() => {
@@ -162,6 +170,10 @@ export default function TeacherLoginWithID() {
   };
 
   const handleOAuthError = (error: string) => {
+    if (/pending|blocked|approval/i.test(error)) {
+      setMessage(`❌ Access blocked: ${error}`);
+      return;
+    }
     setMessage(`❌ OAuth login failed: ${error}`);
   };
 
@@ -221,22 +233,29 @@ export default function TeacherLoginWithID() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{
-      backgroundImage: "url('/attendance-media/smart-lab-background.mp4')",
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      position: 'relative'
-    }}>
+    <div className="relative min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900">
       <div className="absolute inset-0 bg-black/40"></div>
       <div className="w-full max-w-6xl">
         <div ref={containerRef} className="glass p-8 rounded-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <GraduationCap className="w-10 h-10 text-white" />
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden border-2 border-white/50">
+              {selectedTeacher ? (
+                <img
+                  src={selectedTeacher.avatar}
+                  alt={selectedTeacher.name}
+                  className="w-full h-full object-cover animate-fade-in"
+                />
+              ) : (
+                <GraduationCap className="w-10 h-10 text-white" />
+              )}
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Teacher Portal</h1>
-            <p className="text-white/90">Select your profile and login with OTP</p>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              {selectedTeacher ? selectedTeacher.name : "Teacher Portal"}
+            </h1>
+            <p className="text-white/90">
+              {selectedTeacher ? "Verify OTP or use Google Auth to log in" : "Select your profile and login with OTP"}
+            </p>
           </div>
 
           {/* Teacher Selection */}
@@ -309,6 +328,10 @@ export default function TeacherLoginWithID() {
                   onError={handleOAuthError}
                   role="teacher"
                 />
+                <div className="mt-3 flex items-center justify-center gap-4 text-xs text-white/80">
+                  <span className="inline-flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Approved teachers can sign in</span>
+                  <span className="inline-flex items-center gap-1"><ShieldX className="w-3.5 h-3.5" /> Blocked/pending accounts are denied</span>
+                </div>
               </div>
 
               <div className="relative">

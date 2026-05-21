@@ -83,6 +83,16 @@ router.patch("/mark-all-read", auth(["student", "teacher", "admin"]), async (req
   }
 });
 
+// Clear all notifications
+router.delete("/clear-all", auth(["student", "teacher", "admin"]), async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({ userId: req.user.sub });
+    return ok(res, { deletedCount: result.deletedCount || 0 }, "All notifications cleared");
+  } catch (error) {
+    return fail(res, 500, "Failed to clear notifications");
+  }
+});
+
 // Delete notification
 router.delete("/:id", auth(["student", "teacher", "admin"]), async (req, res) => {
   try {

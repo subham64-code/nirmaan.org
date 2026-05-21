@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Mail, MessageSquare, Key, CheckCircle, XCircle, AlertCircle, Send, RefreshCw } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface TestResult {
   type: "otp" | "email" | "sms";
@@ -29,6 +30,29 @@ export default function CommunicationTestPage() {
     setTestResults(prev => [newResult, ...prev].slice(0, 10)); // Keep last 10 results
   };
 
+  // Sanitize any response details to avoid exposing OTPs in the UI
+  const redactOtpFields = (obj: any) => {
+    if (!obj) return obj;
+    try {
+      const copy = JSON.parse(JSON.stringify(obj));
+      const walk = (o: any) => {
+        if (o && typeof o === 'object') {
+          for (const k of Object.keys(o)) {
+            if (/debugOtp|otpCode|otp/i.test(k)) {
+              o[k] = '[REDACTED]';
+            } else {
+              walk(o[k]);
+            }
+          }
+        }
+      };
+      walk(copy);
+      return copy;
+    } catch {
+      return '[REDACTED]';
+    }
+  };
+
   const testOTPRequest = async () => {
     if (!testData.email) {
       addTestResult({
@@ -41,40 +65,23 @@ export default function CommunicationTestPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/request-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: testData.email,
-          role: testData.role
-        })
+      const response = await api.post("/auth/request-otp", {
+        email: testData.email,
+        role: testData.role
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        addTestResult({
-          type: "otp",
-          status: "success",
+      addTestResult({
+        type: "otp",
+        status: "success",
           message: `OTP sent successfully to ${testData.email}`,
-          details: { email: testData.email, role: testData.role }
-        });
-      } else {
-        addTestResult({
-          type: "otp",
-          status: "error",
-          message: result.message || "Failed to send OTP",
-          details: result
-        });
-      }
-    } catch (error) {
+          details: redactOtpFields(response.data)
+      });
+    } catch (error: any) {
       addTestResult({
         type: "otp",
         status: "error",
-        message: "Network error occurred",
-        details: error
+          message: error.response?.data?.message || "Failed to send OTP",
+          details: redactOtpFields(error.response?.data) || redactOtpFields(error)
       });
     } finally {
       setIsLoading(false);
@@ -93,41 +100,24 @@ export default function CommunicationTestPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/test/email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: testData.email,
-          subject: "Nirmaan Test Email",
-          message: testData.customMessage || "This is a test email from Nirmaan platform."
-        })
+      const response = await api.post("/test/email", {
+        to: testData.email,
+        subject: "Nirmaan Test Email",
+        message: testData.customMessage || "This is a test email from Nirmaan platform."
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        addTestResult({
-          type: "email",
-          status: "success",
-          message: `Test email sent successfully to ${testData.email}`,
-          details: { email: testData.email }
-        });
-      } else {
-        addTestResult({
-          type: "email",
-          status: "error",
-          message: result.message || "Failed to send email",
-          details: result
-        });
-      }
-    } catch (error) {
+      addTestResult({
+        type: "email",
+        status: "success",
+        message: `Test email sent successfully to ${testData.email}`,
+        details: response.data
+      });
+    } catch (error: any) {
       addTestResult({
         type: "email",
         status: "error",
-        message: "Network error occurred",
-        details: error
+        message: error.response?.data?.message || "Failed to send email",
+        details: error.response?.data || error
       });
     } finally {
       setIsLoading(false);
@@ -146,40 +136,23 @@ export default function CommunicationTestPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/test/sms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: testData.phone,
-          message: testData.customMessage || "This is a test SMS from Nirmaan platform."
-        })
+      const response = await api.post("/test/sms", {
+        to: testData.phone,
+        message: testData.customMessage || "This is a test SMS from Nirmaan platform."
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        addTestResult({
-          type: "sms",
-          status: "success",
-          message: `Test SMS sent successfully to ${testData.phone}`,
-          details: { phone: testData.phone }
-        });
-      } else {
-        addTestResult({
-          type: "sms",
-          status: "error",
-          message: result.message || "Failed to send SMS",
-          details: result
-        });
-      }
-    } catch (error) {
+      addTestResult({
+        type: "sms",
+        status: "success",
+        message: `Test SMS sent successfully to ${testData.phone}`,
+        details: response.data
+      });
+    } catch (error: any) {
       addTestResult({
         type: "sms",
         status: "error",
-        message: "Network error occurred",
-        details: error
+        message: error.response?.data?.message || "Failed to send SMS",
+        details: error.response?.data || error
       });
     } finally {
       setIsLoading(false);
@@ -268,6 +241,7 @@ export default function CommunicationTestPage() {
                 Role (for OTP)
               </label>
               <select
+                aria-label="Role for OTP"
                 value={testData.role}
                 onChange={(e) => setTestData(prev => ({ ...prev, role: e.target.value }))}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

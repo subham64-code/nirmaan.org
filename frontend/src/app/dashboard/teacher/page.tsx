@@ -4,12 +4,16 @@ import { useState, useEffect } from "react";
 import { api, authHeader } from "@/lib/api";
 import DashboardShell from "@/components/DashboardShell";
 import { motion } from "framer-motion";
-import { BookOpen, Clock, Users, CheckCircle, AlertCircle, TrendingUp, Award, Calendar, Bot, Sparkles, Bell } from "lucide-react";
+import { BookOpen, Clock, Users, CheckCircle, AlertCircle, TrendingUp, Award, Calendar, QrCode, MapPin, Shield, ExternalLink } from "lucide-react";
 import NotificationSystem from "@/components/NotificationSystem";
 import AttendanceWidget from "@/components/AttendanceWidget";
 import AIQuestionGenerator from "@/components/AIQuestionGenerator";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import TeacherProfileCard from "@/components/TeacherProfileCard";
+import GPSBasedAttendance from "@/components/GPSBasedAttendance";
+import QRAttendanceSystem from "@/components/QRAttendanceSystem";
+import EnhancedExamSystem from "@/components/EnhancedExamSystem";
+import { proctoringLaunchUrl } from "@/lib/constants";
 
 interface TeacherStats {
   totalStudents: number;
@@ -127,6 +131,23 @@ export default function TeacherDashboard() {
     setTimeout(() => setMessage(""), 5000);
   };
 
+  const autoVerifyTodayAttendance = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.post(
+        "/attendance/verify/pending",
+        { dateKey: new Date().toISOString().slice(0, 10) },
+        { headers: authHeader(token) }
+      );
+      const count = response.data?.data?.modifiedCount || 0;
+      showMessage(`Auto verification complete. ${count} records approved.`, "success");
+    } catch {
+      showMessage("Failed to auto verify attendance.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAiGenerateQuestions = async () => {
     if (!aiTopic.trim()) {
       showMessage("Please enter a topic for question generation", "error");
@@ -168,10 +189,35 @@ export default function TeacherDashboard() {
         { href: "/dashboard/teacher", label: "Overview" },
         { href: "/dashboard/teacher/questions", label: "Questions" },
         { href: "/dashboard/teacher/attendance-verification", label: "Verify Attendance" },
-        { href: "/dashboard/teacher/tests", label: "Tests & Results" },
+        { href: "/dashboard/teacher/tests", label: "Assessments & Results" },
+        { href: "/attendance-system", label: "QR Attendance" },
       ]}
       actions={<NotificationSystem />}
     >
+      <motion.section
+        className="glass p-5 rounded-2xl flex items-center justify-between"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.03 }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold">
+            {(teacherName || "T").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm text-[var(--muted)]">Authorized Teacher</p>
+            <p className="font-semibold">{teacherName || "Teacher"}</p>
+          </div>
+        </div>
+        <button
+          onClick={autoVerifyTodayAttendance}
+          disabled={isLoading}
+          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+        >
+          Auto Check Attendance
+        </button>
+      </motion.section>
+
       {/* Attendance & AI Section */}
       <motion.section
         className="grid gap-6 lg:grid-cols-2"
@@ -180,7 +226,45 @@ export default function TeacherDashboard() {
         transition={{ delay: 0.05 }}
       >
         <AttendanceWidget />
-        <AIQuestionGenerator />
+        <AIQuestionGenerator userRole="teacher" />
+      </motion.section>
+
+      {/* QR Attendance + GPS Check-In */}
+      <motion.section
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+      >
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <QrCode className="w-5 h-5 text-[var(--brand)]" />
+            <h2 className="text-xl font-bold">QR Attendance Generator</h2>
+          </div>
+          <QRAttendanceSystem role="faculty" />
+        </div>
+        <GPSBasedAttendance compact />
+      </motion.section>
+
+      {/* Exam Management */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <BookOpen className="w-5 h-5 text-[var(--brand)]" />
+          <h2 className="text-xl font-bold">Exam Management</h2>
+        </div>
+        <EnhancedExamSystem userRole="teacher" />
+        <div className="mt-4 flex gap-3">
+          <a href="/exam" className="inline-flex items-center gap-2 rounded-full bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-700">
+            <BookOpen className="w-4 h-4" /> Open Exam Portal
+          </a>
+          <a href={proctoringLaunchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]">
+            <Shield className="w-4 h-4 text-orange-500" /> AI Proctoring <ExternalLink className="w-3 h-3 opacity-80" />
+          </a>
+        </div>
       </motion.section>
 
       {/* Quick Stats */}
@@ -231,41 +315,7 @@ export default function TeacherDashboard() {
         </motion.section>
       )}
 
-      {/* Quick Stats */}
-      <motion.section className="grid gap-6 md:grid-cols-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <AnimatedCard
-          title="Active Tests"
-          value={stats?.totalTests || 0}
-          icon={<BookOpen className="text-blue-500" />}
-          description="Published"
-          gradient="from-blue-500 to-blue-600"
-          delay={0}
-        />
-        <AnimatedCard
-          title="Total Students"
-          value={stats?.totalStudents || 0}
-          icon={<Users className="text-green-500" />}
-          description="Enrolled"
-          gradient="from-green-500 to-green-600"
-          delay={0.1}
-        />
-        <AnimatedCard
-          title="Today Attendance"
-          value={stats?.todayAttendance || 0}
-          icon={<Calendar className="text-purple-500" />}
-          description="Marked"
-          gradient="from-purple-500 to-purple-600"
-          delay={0.2}
-        />
-        <AnimatedCard
-          title="Avg Performance"
-          value={`${stats?.avgPerformance || 0}%`}
-          icon={<TrendingUp className="text-pink-500" />}
-          description="Class average"
-          gradient="from-pink-500 to-pink-600"
-          delay={0.3}
-        />
-      </motion.section>
+
 
       {/* Message Display */}
       {message && (

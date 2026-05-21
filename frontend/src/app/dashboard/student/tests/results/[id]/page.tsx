@@ -121,7 +121,7 @@ export default function TestResultsPage() {
           <div className="p-4 rounded-lg bg-[var(--surface-2)]">
             <p className="text-xs text-[var(--muted)] mb-2">Percentage</p>
             <p className="text-3xl font-bold text-[var(--brand)]">
-              {((testResult.score / test.totalMarks) * 100).toFixed(1)}%
+              {test.totalMarks > 0 ? ((testResult.score / test.totalMarks) * 100).toFixed(1) : "0.0"}%
             </p>
             <p className="text-sm text-[var(--muted)] mt-2">Performance</p>
           </div>

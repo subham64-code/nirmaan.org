@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Users, Mail, Lock, CheckCircle, AlertCircle, GraduationCap } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -13,262 +13,13 @@ interface PredefinedStudent {
   qualification: string;
   status: "active" | "pending" | "approved";
   avatar: string;
+  branch?: string;
+  mobile?: string;
 }
-
-const predefinedStudents: PredefinedStudent[] = [
-  {
-    id: "STU001",
-    name: "Abhijit Patra",
-    email: "abhijit.patra@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/001",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=AP"
-  },
-  {
-    id: "STU002",
-    name: "Ananya Bishoyi",
-    email: "ananya.bishoyi@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/002",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=AB"
-  },
-  {
-    id: "STU003",
-    name: "Animesh Samantaray",
-    email: "animesh.samantaray@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/003",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=AS"
-  },
-  {
-    id: "STU004",
-    name: "Ankit Kumar Manjhi",
-    email: "ankit.manjhi@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/004",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=AK"
-  },
-  {
-    id: "STU005",
-    name: "Ashis Kumar Bhuyan",
-    email: "ashis.bhuyan@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/005",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=AKB"
-  },
-  {
-    id: "STU006",
-    name: "Asmit Singh",
-    email: "asmit.singh@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/006",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=ASI"
-  },
-  {
-    id: "STU007",
-    name: "Debasmita Swain",
-    email: "debasmita.swain@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/007",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=DS"
-  },
-  {
-    id: "STU008",
-    name: "Eleena Jena",
-    email: "eleena.jena@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/008",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=EJ"
-  },
-  {
-    id: "STU009",
-    name: "Jaychandra Das",
-    email: "jaychandra.das@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/009",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=JD"
-  },
-  {
-    id: "STU010",
-    name: "Kishor Kumar Sahoo",
-    email: "kishor.sahoo@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/010",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=KS"
-  },
-  {
-    id: "STU011",
-    name: "Md Salik Ubair",
-    email: "salik.ubair@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/011",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=MSU"
-  },
-  {
-    id: "STU012",
-    name: "Md Wasiq Anwer",
-    email: "wasiq.anwer@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/012",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=MWA"
-  },
-  {
-    id: "STU013",
-    name: "Mohammad Hassan",
-    email: "mohammad.hassan@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/013",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=MH"
-  },
-  {
-    id: "STU014",
-    name: "Mohammad Kashif Iqbal",
-    email: "kashif.iqbal@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/014",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=MKI"
-  },
-  {
-    id: "STU015",
-    name: "Om Prakash Behura",
-    email: "om.behura@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/015",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=OPB"
-  },
-  {
-    id: "STU016",
-    name: "Pradeep Kumar Singha",
-    email: "pradeep.singha@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/016",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=PKS"
-  },
-  {
-    id: "STU017",
-    name: "Prajyakta Patra",
-    email: "prajyakta.patra@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/017",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=PP"
-  },
-  {
-    id: "STU018",
-    name: "Sai Premananda Das",
-    email: "sai.das@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/018",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SPD"
-  },
-  {
-    id: "STU019",
-    name: "Shibani Bardhan",
-    email: "shibani.bardhan@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/019",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SB"
-  },
-  {
-    id: "STU020",
-    name: "Sisir Pradhan",
-    email: "sisir.pradhan@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/020",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SP"
-  },
-  {
-    id: "STU021",
-    name: "Spandan Kumar Behera",
-    email: "spandan.behera@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/021",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SKB"
-  },
-  {
-    id: "STU022",
-    name: "Subham Behera",
-    email: "subham.behera@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/022",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SBH"
-  },
-  {
-    id: "STU023",
-    name: "Subrat Narayan Nanda",
-    email: "subrat.nanda@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/023",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SNN"
-  },
-  {
-    id: "STU024",
-    name: "Suman Sourav Dash",
-    email: "suman.dash@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/024",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SSD"
-  },
-  {
-    id: "STU025",
-    name: "Sumit Raj",
-    email: "sumit.raj@nirmaan.edu",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/025",
-    course: "AI/ML",
-    qualification: "B.Tech",
-    status: "active",
-    avatar: "https://via.placeholder.com/150x150/4F46E5/FFFFFF?text=SR"
-  }
-];
+import { redingtonStudents, industryOrientedStudents } from "@/lib/predefinedStudents";
 
 export default function StudentLoginWithList() {
+  const [dynamicStudents, setDynamicStudents] = useState<PredefinedStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<PredefinedStudent | null>(null);
   const [showOTP, setShowOTP] = useState(false);
   const [email, setEmail] = useState("");
@@ -277,6 +28,57 @@ export default function StudentLoginWithList() {
   const [loginMethod, setLoginMethod] = useState<"list" | "email" | "otp">("list");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedCohort, setSelectedCohort] = useState<"redington" | "industry">("industry");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const loadApprovedStudents = async () => {
+      try {
+        const response = await api.get("/students/predefined");
+        const rows = response.data?.data || [];
+        if (Array.isArray(rows)) {
+          setDynamicStudents(rows);
+        }
+      } catch {
+        setDynamicStudents([]);
+      }
+    };
+    loadApprovedStudents();
+  }, []);
+
+  const predefinedStudents = useMemo(() => {
+    const fallbackList = selectedCohort === "redington" ? redingtonStudents : industryOrientedStudents;
+    const filteredDynamic = dynamicStudents.filter(s => {
+      const courseStr = String(s.course || "").toLowerCase();
+      if (selectedCohort === "redington") {
+        return courseStr.includes("ai/ml") || courseStr.includes("redington") || (!courseStr.includes("industry") && !courseStr.includes("cse-ai"));
+      } else {
+        return courseStr.includes("industry") || courseStr.includes("cse-ai");
+      }
+    });
+
+    const merged = [...filteredDynamic, ...fallbackList];
+    const seen = new Set<string>();
+    const deDuplicated = merged.filter((row) => {
+      const key = (row.email || row.nirmaanId || row.id).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return deDuplicated.filter(s => 
+        String(s.name || "").toLowerCase().includes(q) ||
+        String(s.nirmaanId || "").toLowerCase().includes(q) ||
+        String(s.email || "").toLowerCase().includes(q) ||
+        String(s.branch || s.course || "").toLowerCase().includes(q) ||
+        String(s.mobile || "").toLowerCase().includes(q)
+      );
+    }
+
+    return deDuplicated;
+  }, [dynamicStudents, selectedCohort, searchQuery]);
 
   const handleStudentSelect = (student: PredefinedStudent) => {
     setSelectedStudent(student);
@@ -303,25 +105,39 @@ export default function StudentLoginWithList() {
     }
 
     setLoading(true);
-    setMessage("� Sending OTP via SMS...");
+    setMessage("Sending OTP...");
+    setOtp("");
+
+    // Try to find student in predefined or dynamic lists to extract course/mobile
+    const matchedStudent = [
+      ...industryOrientedStudents, 
+      ...redingtonStudents, 
+      ...(typeof dynamicStudents !== "undefined" ? dynamicStudents : [])
+    ].find(
+      (s) => s.email?.toLowerCase().trim() === email.toLowerCase().trim()
+    );
 
     try {
       const response = await api.post("/auth/request-otp", {
         email,
         role: "student",
-        deliveryMethod: "sms"
+        name: matchedStudent?.name || "Student",
+        course: matchedStudent?.course || "CSE-AI Industry Oriented",
+        mobile: matchedStudent?.mobile || (matchedStudent as any)?.phone,
       });
 
       if (response.data.success) {
-        setMessage("✅ OTP sent via SMS! Check your phone.");
+        const target = response.data?.data?.target || "registered contact";
+        const who = matchedStudent?.name || "Student";
+        setMessage(`OTP sent successfully for ${who}. Delivery target: ${target}. Please check your registered email or SMS inbox.`);
         setShowOTP(true);
         setLoginMethod("otp");
       } else {
-        setMessage("❌ Failed to send OTP. Please try again.");
+        setMessage("Failed to send OTP. Please try again.");
       }
     } catch (error) {
       const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setMessage(responseMessage ? `❌ ${responseMessage}` : "❌ Failed to send OTP. Please check your connection and try again.");
+      setMessage(responseMessage ? `${responseMessage}` : "Failed to send OTP. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -348,17 +164,18 @@ export default function StudentLoginWithList() {
         localStorage.setItem("nirmaan_token", token);
         localStorage.setItem("nirmaan_user", JSON.stringify(user));
         localStorage.setItem("nirmaan_user_name", user.name || user.email);
+        localStorage.setItem("nirmaan_role", "student");
 
-        setMessage("✅ Login successful! Redirecting to dashboard...");
+        setMessage("Login successful! Redirecting to dashboard...");
         setTimeout(() => {
           window.location.href = "/dashboard/student";
         }, 1500);
       } else {
-        setMessage("❌ Invalid OTP. Please try again.");
+        setMessage("Invalid OTP. Please try again.");
       }
     } catch (error) {
       const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setMessage(responseMessage ? `❌ ${responseMessage}` : "❌ Login failed. Please check your OTP and try again.");
+      setMessage(responseMessage ? `${responseMessage}` : "Login failed. Please check your OTP and try again.");
     } finally {
       setLoading(false);
     }
@@ -385,17 +202,18 @@ export default function StudentLoginWithList() {
         localStorage.setItem("nirmaan_token", token);
         localStorage.setItem("nirmaan_user", JSON.stringify(user));
         localStorage.setItem("nirmaan_user_name", user.name || user.email);
+        localStorage.setItem("nirmaan_role", "student");
 
-        setMessage("✅ Login successful! Redirecting to dashboard...");
+        setMessage(`Login successful! Welcome ${selectedStudent.name}. Redirecting to dashboard...`);
         setTimeout(() => {
           window.location.href = "/dashboard/student";
         }, 1500);
       } else {
-        setMessage("❌ Invalid OTP. Please try again.");
+        setMessage("Invalid OTP. Please try again.");
       }
     } catch (error) {
       const responseMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setMessage(responseMessage ? `❌ ${responseMessage}` : "❌ Login failed. Please check your OTP and try again.");
+      setMessage(responseMessage ? `${responseMessage}` : "Login failed. Please check your OTP and try again.");
     } finally {
       setLoading(false);
     }
@@ -408,23 +226,35 @@ export default function StudentLoginWithList() {
     }
 
     setLoading(true);
-    setMessage("� Sending OTP via SMS...");
+    setMessage("Sending OTP...");
+    setOtp("");
 
     try {
       const response = await api.post("/auth/request-otp", {
         email: selectedStudent.email,
         role: "student",
-        deliveryMethod: "sms"
+        name: selectedStudent.name,
+        course: selectedStudent.course,
+        mobile: selectedStudent.mobile,
       });
 
       if (response.data.success) {
-        setMessage("✅ OTP sent via SMS! Check your phone.");
+        const target = response.data?.data?.target || "registered contact";
+        const code = response.data?.data?.debugOtp; // only accept explicit demo OTP
+        if (code) {
+          // show demo OTP only when backend intentionally provided it
+          setMessage(`OTP sent for ${selectedStudent.name}. Delivery target: ${target}. [Demo Mode: Use OTP Code: ${code}]`);
+          setOtp(code);
+        } else {
+          // Do NOT display any production OTPs in the UI
+          setMessage(`OTP sent for ${selectedStudent.name}. Delivery target: ${target}. Check your registered email or SMS inbox.`);
+        }
         setShowOTP(true);
       } else {
-        setMessage("❌ Failed to send OTP. Please try again.");
+        setMessage("Failed to send OTP. Please try again.");
       }
     } catch (error) {
-      setMessage("❌ Failed to send OTP. Please check your connection and try again.");
+      setMessage("Failed to send OTP. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -442,6 +272,12 @@ export default function StudentLoginWithList() {
             <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">Student Portal</h1>
             <p className="text-[var(--muted)]">Choose your login method</p>
           </div>
+
+          {dynamicStudents.length > 0 && (
+            <p className="text-center text-xs text-[var(--muted)] mb-4">
+              Live approved students loaded: {dynamicStudents.length}
+            </p>
+          )}
 
           {/* Login Method Selection */}
           <div className="mb-6">
@@ -473,50 +309,133 @@ export default function StudentLoginWithList() {
 
           {/* Predefined Student List */}
           {loginMethod === "list" && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Select Your Profile</h3>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {predefinedStudents.map((student) => (
-                  <div
-                    key={student.id}
-                    onClick={() => handleStudentSelect(student)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      selectedStudent?.id === student.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-[var(--outline)] hover:border-blue-500 hover:bg-[var(--surface-2)]"
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--outline)] pb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-[var(--foreground)]">Select Your Profile</h3>
+                  <p className="text-xs text-[var(--muted)] mt-0.5">Click your card to request your secure entry OTP code</p>
+                </div>
+                
+                {/* Cohort Selector Tab Deck */}
+                <div className="flex bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--outline)] self-start sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCohort("industry");
+                      setSearchQuery("");
+                    }}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      selectedCohort === "industry"
+                        ? "bg-[var(--brand)] text-white shadow-xs"
+                        : "text-[var(--foreground)] hover:bg-[var(--surface-3)]"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={student.avatar}
-                        alt={student.name}
-                        className="w-12 h-12 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-[var(--foreground)]">{student.name}</p>
-                            <p className="text-sm text-[var(--muted)]">{student.nirmaanId}</p>
-                          </div>
-                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                            student.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : student.status === "approved"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}>
-                            {student.status}
-                          </span>
+                    CSE-AI (Industry Oriented)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCohort("redington");
+                      setSearchQuery("");
+                    }}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      selectedCohort === "redington"
+                        ? "bg-[var(--brand)] text-white shadow-xs"
+                        : "text-[var(--foreground)] hover:bg-[var(--surface-3)]"
+                    }`}
+                  >
+                    AI/ML (Redington Branch)
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Bar & Result Summary */}
+              <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="🔍 Search by name, email, register no, mobile..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--outline)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] bg-[var(--surface)] text-sm"
+                  />
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none">
+                    {/* Lucide icon placeholder/magnifying glass handled by character */}
+                  </div>
+                </div>
+                <div className="text-xs font-semibold text-[var(--muted)] self-end sm:self-center bg-[var(--surface-2)] px-3 py-2 rounded-lg border border-[var(--outline)]">
+                  Showing {predefinedStudents.length} of {selectedCohort === "redington" ? redingtonStudents.length : industryOrientedStudents.length} Students
+                </div>
+              </div>
+
+              {predefinedStudents.length === 0 ? (
+                <div className="text-center py-12 bg-[var(--surface-2)] rounded-2xl border border-dashed border-[var(--outline)]">
+                  <p className="text-sm text-[var(--muted)]">No students found matching "{searchQuery}"</p>
+                  <button 
+                    onClick={() => setSearchQuery("")}
+                    className="mt-3 text-xs text-[var(--brand)] font-bold hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-h-[500px] overflow-y-auto pr-1">
+                  {predefinedStudents.map((student) => (
+                    <div
+                      key={student.id}
+                      onClick={() => handleStudentSelect(student)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer relative group flex flex-col justify-between ${
+                        selectedStudent?.id === student.id
+                          ? "border-blue-500 bg-blue-50/50 shadow-md ring-2 ring-blue-200"
+                          : "border-[var(--outline)] hover:border-blue-400 hover:bg-[var(--surface-2)] hover:shadow-xs"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={student.avatar}
+                          alt={student.name}
+                          className="w-11 h-11 rounded-full border border-gray-200 object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-[var(--foreground)] text-sm truncate group-hover:text-blue-600 transition-colors">
+                            {student.name}
+                          </p>
+                          <p className="text-[11px] text-[var(--brand)] font-semibold truncate">
+                            {student.nirmaanId}
+                          </p>
+                          <p className="text-[11px] text-[var(--muted)] truncate mt-0.5">
+                            {student.email}
+                          </p>
                         </div>
+                        <span className={`px-2 py-0.5 text-[9px] rounded-full font-bold self-start ${
+                          student.status === "active"
+                            ? "bg-green-100 text-green-700 border border-green-200"
+                            : "bg-blue-100 text-blue-700 border border-blue-200"
+                        }`}>
+                          {student.status.toUpperCase()}
+                        </span>
                       </div>
-                      <div className="text-sm text-[var(--muted)]">
-                        <p>{student.course}</p>
-                        <p>{student.qualification}</p>
+
+                      {/* Secondary meta info inside card */}
+                      <div className="mt-4 pt-3 border-t border-dashed border-[var(--outline)] flex items-center justify-between text-[10px] text-[var(--muted)]">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-gray-700">
+                            {student.branch || student.course}
+                          </p>
+                          {student.mobile && (
+                            <p className="mt-0.5 text-gray-500">
+                              📞 {student.mobile}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ml-2">
+                          Send OTP →
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -640,9 +559,9 @@ export default function StudentLoginWithList() {
           {/* Messages */}
           {message && (
             <div className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${
-              message.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              message.toLowerCase().includes("successful") || message.toLowerCase().includes("sent") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
             }`}>
-              {message.includes("✅") ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              {message.toLowerCase().includes("successful") || message.toLowerCase().includes("sent") ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
               {message}
             </div>
           )}

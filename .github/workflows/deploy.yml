@@ -1,0 +1,43 @@
+name: Nirmaan Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        env:
+          FRONTEND_DEPLOY_WEBHOOK: ${{ secrets.FRONTEND_DEPLOY_WEBHOOK }}
+          BACKEND_DEPLOY_WEBHOOK: ${{ secrets.BACKEND_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -z "$FRONTEND_DEPLOY_WEBHOOK" ] || [ -z "$BACKEND_DEPLOY_WEBHOOK" ]; then
+            echo "Missing FRONTEND_DEPLOY_WEBHOOK or BACKEND_DEPLOY_WEBHOOK secret"
+            exit 1
+          fi
+
+      - name: Trigger backend deploy
+        env:
+          BACKEND_DEPLOY_WEBHOOK: ${{ secrets.BACKEND_DEPLOY_WEBHOOK }}
+        run: curl -fsSL -X POST "$BACKEND_DEPLOY_WEBHOOK"
+
+      - name: Trigger frontend deploy
+        env:
+          FRONTEND_DEPLOY_WEBHOOK: ${{ secrets.FRONTEND_DEPLOY_WEBHOOK }}
+        run: curl -fsSL -X POST "$FRONTEND_DEPLOY_WEBHOOK"
+
+      - name: Deployment summary
+        run: echo "Deployment webhooks triggered for ${{ github.event.inputs.environment }}"

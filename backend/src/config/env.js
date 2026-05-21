@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-module.exports = {
+const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT) || 5000,
   mongoUri: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/nirmaan_org",
@@ -28,3 +28,12 @@ module.exports = {
   geminiApiKey: process.env.GEMINI_API_KEY || process.env.GEMINI_AI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "",
   emailApiKey: process.env.EMAIL_API_KEY || "",
 };
+
+console.log("🛠️ Config Loaded:", {
+  port: config.port,
+  googleClientId: config.googleOauthClientId ? config.googleOauthClientId.substring(0, 15) + "..." : "MISSING",
+  mongoUri: config.mongoUri.substring(0, 15) + "...",
+  rateLimitMax: config.nodeEnv === 'development' ? 10000 : "Standard"
+});
+
+module.exports = config;

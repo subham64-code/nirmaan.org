@@ -39,19 +39,10 @@ export default function GsapEffects() {
       });
     });
 
-    const cursor = document.getElementById("cursor-dot");
-    const moveCursor = (e: MouseEvent) => {
-      if (cursor) {
-        gsap.to(cursor, { x: e.clientX - 8, y: e.clientY - 8, duration: 0.2, ease: "power2.out" });
-      }
-    };
-    window.addEventListener("mousemove", moveCursor);
-
     return () => {
       ScrollTrigger.getAll().forEach((t) => t.kill());
-      window.removeEventListener("mousemove", moveCursor);
     };
   }, []);
 
-  return <div id="cursor-dot" className="pointer-events-none fixed z-[80] hidden h-4 w-4 rounded-full bg-[var(--brand)] md:block" />;
+  return null;
 }

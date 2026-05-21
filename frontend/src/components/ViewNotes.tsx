@@ -267,18 +267,18 @@ export default function ViewNotes() {
 
             <div className="flex gap-2 mt-4">
               <button
-                onClick={() => downloadNote(note)}
+                onClick={(e) => { e.stopPropagation(); downloadNote(note); }}
                 className="flex-1 px-4 py-2 bg-[var(--brand)] text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 Download
               </button>
               <button
-                onClick={() => setSelectedNote(note)}
+                onClick={(e) => { e.stopPropagation(); setSelectedNote(note); }}
                 className="flex-1 px-4 py-2 border border-[var(--outline)] rounded-lg hover:bg-[var(--surface-2)] transition-colors flex items-center justify-center gap-2"
               >
                 <FileText className="w-4 h-4" />
-                View Details
+                Details
               </button>
             </div>
           </div>

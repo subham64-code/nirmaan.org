@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Bot, BrainCircuit, BriefcaseBusiness, Sparkles, MapPin, BookOpen, FileText, Images, ClipboardCheck, UserCheck } from "lucide-react";
+import { Bot, BrainCircuit, BriefcaseBusiness, Sparkles, Images } from "lucide-react";
 import Image from "next/image";
 import { adminProfile, courses, galleryImages, trainerProfiles, backgroundVideoUrl } from "@/lib/constants";
-import { AchievementsSection } from "@/components/AchievementsSection";
 import { CombinedLogo } from "@/components/LogoSection";
 import GIFTHubs from "@/components/GIFTHubs";
-// import FacultyIntroVideos from "@/components/FacultyIntroVideos";
+import FacultyIntroVideos from "@/components/FacultyIntroVideos";
 
 export default function Home() {
   return (
@@ -33,31 +32,14 @@ export default function Home() {
             Nirmaan delivers AI/ML, Deep Learning, NLP, Generative AI and Soft Skills programs with structured attendance, testing, progress tracking and placement support.
           </p>
           <div data-reveal className="flex flex-wrap gap-3">
-            <Link href="/apply" className="rounded-full bg-[var(--brand)] px-6 py-3 font-semibold text-white hover:opacity-90 transition-opacity">Apply Now</Link>
-            <Link href="/courses" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors">Explore Courses</Link>
-            <Link href="/syllabus" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors">📋 View Syllabus</Link>
-            <a href="/notes" target="_blank" rel="noopener noreferrer" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors">📄 View Notes</a>
-            <Link href="/media" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors flex items-center gap-2">
-              <Images className="w-5 h-5" />
-              Media Gallery
-            </Link>
-            <Link href="/exam" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors flex items-center gap-2">
-              <ClipboardCheck className="w-5 h-5" />
-              Exam System
-            </Link>
-            <Link href="/attendance-system" className="rounded-full border border-[var(--outline)] px-6 py-3 font-semibold hover:bg-[var(--surface-2)] transition-colors flex items-center gap-2">
-              <UserCheck className="w-5 h-5" />
-              Attendance System
-            </Link>
+            <Link href="/courses" className="rounded-full bg-[var(--brand)] px-6 py-3 font-semibold text-white hover:opacity-90 transition-opacity">Explore Employee Courses</Link>
           </div>
         </div>
       </section>
 
-      {/* GIFT Hubs Section - Temporarily disabled due to syntax errors */}
-      {/* <GIFTHubs /> */}
+      <GIFTHubs />
 
-      {/* Faculty Intro Videos Section - Temporarily disabled due to syntax errors */}
-      {/* <FacultyIntroVideos /> */}
+      <FacultyIntroVideos />
 
       <section className="section grid gap-6 md:grid-cols-4">
         {[
@@ -148,13 +130,19 @@ export default function Home() {
         </div>
       </section>
 
-      <AchievementsSection />
-
-      <section className="section text-center py-12 px-4">
-        <CombinedLogo />
-        <p className="mt-6 text-sm text-[var(--muted)]">
-          © 2024 Nirmaan Educational Initiative. All rights reserved.<br/>
-          Building tomorrow's AI professionals, today.
+      <section className="section flex flex-col items-center justify-center text-center py-16 px-4 bg-[var(--surface-2)]/30 rounded-3xl border border-[var(--outline)] max-w-4xl mx-auto my-12">
+        <h3 className="text-xl font-bold mb-6 text-[var(--muted)]">Collaborating Institution</h3>
+        <div className="flex items-center justify-center gap-8 flex-wrap">
+          <div className="relative w-32 h-16 rounded overflow-hidden bg-white p-2 border border-[var(--outline)] shadow-sm flex items-center justify-center">
+            <img src="/nirmaan-logo.png" alt="Nirmaan Logo" className="max-w-full max-h-full object-contain" />
+          </div>
+          <div className="text-2xl font-bold text-[var(--muted)]">×</div>
+          <div className="relative w-36 h-16 rounded overflow-hidden bg-white p-2 border border-[var(--outline)] shadow-sm flex items-center justify-center">
+            <img src="/gift-logo.svg" alt="GIFT Logo" className="max-w-full max-h-full object-contain" />
+          </div>
+        </div>
+        <p className="mt-6 text-sm text-[var(--muted)] max-w-md">
+          Nirmaan is proud to collaborate with Gandhi Institute for Technology (GIFT) to deliver future-ready technology and career training ecosystems.
         </p>
       </section>
     </div>

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Plus, Trash2, Save } from 'lucide-react';
 import axios from 'axios';
+import { api, authHeader } from '@/lib/api';
 
 interface ExtractedQuestion {
   question: string;
@@ -92,6 +93,53 @@ export default function QuestionExtractor() {
     setExtractedQuestions(extractedQuestions.filter((_, i) => i !== index));
   };
 
+  const saveQuestionToBank = async (q: ExtractedQuestion, index: number) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('nirmaan_token') || '' : '';
+    try {
+      const payload = {
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        marks: q.marks || 1,
+        category: 'Manual',
+        difficulty: 'Medium'
+      };
+
+      await api.post('/questions', payload, { headers: authHeader(token) });
+      setMessage({ type: 'success', text: 'Saved question to bank' });
+      // remove saved question from UI list
+      removeQuestion(index);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to save question' });
+    }
+  };
+
+  const saveAllToBank = async () => {
+    if (extractedQuestions.length === 0) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('nirmaan_token') || '' : '';
+    setLoading(true);
+    try {
+      for (let i = 0; i < extractedQuestions.length; i++) {
+        const q = extractedQuestions[i];
+        const payload = {
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          marks: q.marks || 1,
+          category: 'Manual',
+          difficulty: 'Medium'
+        };
+        await api.post('/questions', payload, { headers: authHeader(token) });
+      }
+      setMessage({ type: 'success', text: `Saved ${extractedQuestions.length} questions to bank` });
+      setExtractedQuestions([]);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.response?.data?.error || 'Failed to save questions' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateManualQuestion = (field: string, value: any) => {
     setManualQuestion(prev => ({
       ...prev,
@@ -171,7 +219,19 @@ export default function QuestionExtractor() {
       {/* Extracted Questions Display */}
       {extractedQuestions.length > 0 && (
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-          <h3 className="text-xl font-bold">Extracted Questions ({extractedQuestions.length})</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold">Extracted Questions ({extractedQuestions.length})</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={saveAllToBank}
+                disabled={loading || extractedQuestions.length === 0}
+                className="flex items-center gap-2 bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                Save All to Bank
+              </button>
+            </div>
+          </div>
           
           <div className="space-y-4">
             {extractedQuestions.map((q, idx) => (
@@ -195,14 +255,24 @@ export default function QuestionExtractor() {
                       Marks: <span className="font-semibold">{q.marks}</span>
                     </p>
                   </div>
-                  <button
-                    onClick={() => removeQuestion(idx)}
-                    className="text-red-500 hover:text-red-700 ml-4"
-                    aria-label="Remove question"
-                    title="Remove question"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  <div className="flex flex-col items-end ml-4 gap-2">
+                    <button
+                      onClick={() => saveQuestionToBank(q, idx)}
+                      className="bg-green-600 text-white py-1 px-2 rounded hover:bg-green-700 text-sm flex items-center gap-2"
+                      title="Save to question bank"
+                    >
+                      <Save className="w-4 h-4" />
+                      Save
+                    </button>
+                    <button
+                      onClick={() => removeQuestion(idx)}
+                      className="text-red-500 hover:text-red-700"
+                      aria-label="Remove question"
+                      title="Remove question"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

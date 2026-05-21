@@ -120,8 +120,9 @@ export default function ApplyPage() {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
             formData.append(key, JSON.stringify(value));
-          } else if (key === "photo" && value instanceof File) {
-            formData.append(key, value);
+          } else if (key === "photo" && (value instanceof File || (value && (value as any)[0] instanceof File))) {
+            const file = value instanceof File ? value : (value as any)[0];
+            formData.append(key, file);
           } else {
             formData.append(key, String(value));
           }
@@ -478,9 +479,10 @@ export default function ApplyPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handlePhotoChange}
                   className="w-full rounded-xl border border-[var(--outline)] p-3"
-                  {...register("photo")}
+                  {...register("photo", {
+                    onChange: (e) => handlePhotoChange(e)
+                  })}
                 />
                 <div className="mt-2 text-xs text-[var(--muted)]">
                   <p>Photo Guidelines:</p>

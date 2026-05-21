@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema(
     idCardQr: { type: String, default: "" },
     otpRequired: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
+    isBlocked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -33,7 +33,7 @@ const securityMiddleware = [
   // Rate limiting
   rateLimit({
     windowMs: parseInt(env.rateLimitWindowMs) || 15 * 60 * 1000, // 15 minutes
-    max: parseInt(env.rateLimitMaxRequests) || 100, // limit each IP to 100 requests per windowMs
+    max: env.nodeEnv === 'development' ? 10000 : (parseInt(env.rateLimitMaxRequests) || 100),
     message: {
       success: false,
       message: 'Too many requests from this IP, please try again later.'
@@ -67,7 +67,7 @@ const securityMiddleware = [
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 ];

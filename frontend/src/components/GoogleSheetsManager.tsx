@@ -14,6 +14,7 @@ import {
   Database,
   Users
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface SheetStatus {
   configured: boolean;
@@ -57,30 +58,13 @@ export default function GoogleSheetsManager() {
   const checkSheetStatus = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("nirmaan_token") || "";
-      const response = await fetch("/api/services/sheet-status", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setSheetStatus(result.data);
-      } else {
-        setSheetStatus({
-          configured: false,
-          connected: false,
-          error: result.message,
-          lastChecked: new Date()
-        });
-      }
-    } catch (error) {
+      const response = await api.get("/services/sheet-status");
+      setSheetStatus(response.data.data);
+    } catch (error: any) {
       setSheetStatus({
         configured: false,
         connected: false,
-        error: "Failed to check sheet status",
+        error: error.response?.data?.message || "Failed to check sheet status",
         lastChecked: new Date()
       });
     } finally {
@@ -91,23 +75,11 @@ export default function GoogleSheetsManager() {
   const previewSheet = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("nirmaan_token") || "";
-      const response = await fetch("/api/services/sheet-preview", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setSheetPreview(result.data);
-        setSyncResult(null);
-      } else {
-        alert("Failed to preview sheet: " + result.message);
-      }
-    } catch (error) {
-      alert("Error previewing sheet: " + (error instanceof Error ? error.message : String(error)));
+      const response = await api.get("/services/sheet-preview");
+      setSheetPreview(response.data.data);
+      setSyncResult(null);
+    } catch (error: any) {
+      alert("Failed to preview sheet: " + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -120,25 +92,12 @@ export default function GoogleSheetsManager() {
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("nirmaan_token") || "";
-      const response = await fetch("/api/services/sheet-sync", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setSyncResult(result.data);
-        // Refresh preview after sync
-        await previewSheet();
-      } else {
-        alert("Failed to sync sheet: " + result.message);
-      }
-    } catch (error) {
-      alert("Error syncing sheet: " + (error instanceof Error ? error.message : String(error)));
+      const response = await api.post("/services/sheet-sync", {});
+      setSyncResult(response.data.data);
+      // Refresh preview after sync
+      await previewSheet();
+    } catch (error: any) {
+      alert("Failed to sync sheet: " + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }

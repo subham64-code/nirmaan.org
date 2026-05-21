@@ -8,10 +8,12 @@ import Image from "next/image";
 import DashboardShell from "@/components/DashboardShell";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import { motion } from "framer-motion";
-import { BookOpen, TrendingUp, Award, BarChart3, Bell, Calendar, Sparkles, ClipboardList, MapPin } from "lucide-react";
+import { BookOpen, TrendingUp, Award, BarChart3, Bell, Calendar, Sparkles, ClipboardList, MapPin, QrCode, Shield, ExternalLink } from "lucide-react";
 import NotificationSystem from "@/components/NotificationSystem";
 import AttendanceWidget from "@/components/AttendanceWidget";
 import EnhancedExamSystem from "@/components/EnhancedExamSystem";
+import StudentPerformanceChart from "@/components/StudentPerformanceChart";
+import { proctoringLaunchUrl } from "@/lib/constants";
 
 type StudentData = {
   profile: {
@@ -42,6 +44,12 @@ export default function StudentDashboard() {
       setData(response.data.data);
     };
     load().catch(() => null);
+
+    const refreshTimer = setInterval(() => {
+      load().catch(() => null);
+    }, 30000);
+
+    return () => clearInterval(refreshTimer);
   }, []);
 
   const avgScore = useMemo(() => {
@@ -53,18 +61,54 @@ export default function StudentDashboard() {
 
   return (
     <DashboardShell
-      title="Student Dashboard"
+      title={data?.profile?.name ? `${data.profile.name} Dashboard` : "Student Dashboard"}
       subtitle="Your attendance, tests, progress, and digital identity"
       nav={[
         { href: "/dashboard/student", label: "Overview" },
-        { href: "/dashboard/student/attendance", label: "GPS Attendance" },
-        { href: "/dashboard/student/tests", label: "Online Tests" },
+        { href: "/dashboard/student/attendance", label: "My Attendance" },
+        { href: "/dashboard/student/tests", label: "Coding Questions" },
         { href: "/dashboard/student/recommendations", label: "AI Recommendations" },
         { href: "/dashboard/student/leave-requests", label: "Leave Requests" },
+        { href: "/syllabus", label: "Syllabus" },
+        { href: "/notes", label: "Notes" },
+        { href: "/media", label: "Media Gallery" },
+        { href: "/dashboard/student/settings", label: "Settings" },
+        { href: "/attendance-system", label: "QR Check-In" },
         { href: "/courses", label: "Course Roadmap" },
       ]}
       actions={<NotificationSystem />}
     >
+      {/* Quick Check-In Strip */}
+      <motion.section
+        className="grid gap-4 md:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.01 }}
+      >
+        <Link href="/dashboard/student/attendance"
+          className="glass p-5 rounded-2xl flex items-center gap-4 hover:bg-[var(--surface-2)] transition group">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white group-hover:scale-110 transition-transform">
+            <MapPin className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="font-bold text-lg">GPS Check-In</p>
+            <p className="text-sm text-[var(--muted)]">Mark attendance with location</p>
+          </div>
+          <span className="ml-auto text-[var(--brand)] font-semibold text-sm">Open →</span>
+        </Link>
+        <Link href="/attendance-system"
+          className="glass p-5 rounded-2xl flex items-center gap-4 hover:bg-[var(--surface-2)] transition group">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-violet-500 text-white group-hover:scale-110 transition-transform">
+            <QrCode className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="font-bold text-lg">QR Scan</p>
+            <p className="text-sm text-[var(--muted)]">Scan QR code from teacher</p>
+          </div>
+          <span className="ml-auto text-[var(--brand)] font-semibold text-sm">Scan →</span>
+        </Link>
+      </motion.section>
+
       {/* Student Attendance & Exam Section */}
       <motion.section
         className="grid gap-6 lg:grid-cols-2"
@@ -213,9 +257,24 @@ export default function StudentDashboard() {
             <p className="text-sm mt-2">{data.performance.feedback}</p>
           </motion.div>
         )}
-        <Link href="/dashboard/student/tests" className="mt-6 inline-block rounded-full bg-[var(--brand)] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
-          Take Online Test
-        </Link>
+        
+        {/* Performance Chart Component */}
+        <div className="mt-8">
+          <p className="text-sm uppercase text-[var(--muted)] mb-2 font-semibold">Score Progression</p>
+          <StudentPerformanceChart testResults={data?.testResults || []} />
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/dashboard/student/tests" className="inline-block rounded-full bg-[var(--brand)] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
+            <BookOpen className="w-4 h-4 inline-block mr-2 -mt-1" /> Take Online Test
+          </Link>
+          <a href={proctoringLaunchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]">
+            <Shield className="w-4 h-4 text-orange-500" /> Open AI Proctoring <ExternalLink className="w-3 h-3 opacity-80" />
+          </a>
+          <Link href="/exam" className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
+            <ExternalLink className="w-4 h-4" /> Exam Portal
+          </Link>
+        </div>
       </motion.section>
 
       {/* Attendance Calendar */}

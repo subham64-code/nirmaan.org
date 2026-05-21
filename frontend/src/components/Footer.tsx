@@ -5,8 +5,7 @@ export default function Footer() {
     <footer className="border-t border-[var(--outline)] bg-[var(--surface)] px-4 py-8 text-sm md:px-6">
       <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <p>© {new Date().getFullYear()} Nirmaan. All rights reserved.</p>
-          <p className="text-[var(--muted)]">AI/ML | Deep Learning | NLP | Generative AI | Soft Skills with Placement Support</p>
+          <p className="text-[var(--muted)]">Nirmaan x GIFT collaborative learning platform</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <a className="rounded-full border border-[var(--outline)] px-3 py-1 hover:bg-[var(--surface-2)]" href="https://instagram.com/my_self_subham_67" target="_blank" rel="noopener noreferrer">Instagram</a>

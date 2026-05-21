@@ -78,9 +78,13 @@ export const backgroundVideoUrl =
   process.env.NEXT_PUBLIC_BACKGROUND_VIDEO_URL ||
   "https://www.youtube.com/embed/-TO3mgStyZY?autoplay=1&mute=1&loop=1&playlist=-TO3mgStyZY&controls=0&modestbranding=1&rel=0&playsinline=1";
 
+export const proctoringLaunchUrl =
+  process.env.NEXT_PUBLIC_PROCTORING_URL ||
+  "http://127.0.0.1:5001/proctoring-launch";
+
 export const dailyAttendanceReportUrl =
   process.env.NEXT_PUBLIC_ATTENDANCE_REPORT_URL ||
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSSGVeYBQc80bUhqv7C-w5FvZn63RI_24WppJJsc9fwG1YqoWW-enIytcLG-FDIv3XD9S-5Cxusp3us/pubhtml";
+  "https://docs.google.com/spreadsheets/d/1D4JBxZLZSHmXhrhLIX-JBrKmPhkpZ2MJX8k0Y6JNY04/edit?gid=905174869#gid=905174869";
 
 export const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 export const googleOauthClientId = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID || "";

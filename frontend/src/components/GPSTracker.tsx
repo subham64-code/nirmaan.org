@@ -33,6 +33,41 @@ export default function GPSTracker({ onLocationUpdate, onAttendanceMark }: GPSTr
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState<"Present" | "Absent" | "Late" | null>(null);
 
+  const [isMocked, setIsMocked] = useState(false);
+
+  const simulateMockLocation = () => {
+    setLoading(true);
+    setError("");
+
+    // Odisha Center Coordinates + small random offset
+    const latOffset = (Math.random() - 0.5) * 0.0002;
+    const lngOffset = (Math.random() - 0.5) * 0.0002;
+
+    const newLocation: Location = {
+      lat: NIRMAAN_CENTER.lat + latOffset,
+      lng: NIRMAAN_CENTER.lng + lngOffset,
+      accuracy: 10,
+      timestamp: new Date().toISOString(),
+    };
+
+    setTimeout(() => {
+      setLocation(newLocation);
+      setIsMocked(true);
+
+      // Calculate distance from Nirmaan center
+      const dist = calculateDistance(
+        newLocation.lat,
+        newLocation.lng,
+        NIRMAAN_CENTER.lat,
+        NIRMAAN_CENTER.lng
+      );
+      setDistance(dist);
+
+      onLocationUpdate?.(newLocation);
+      setLoading(false);
+    }, 500);
+  };
+
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371; // Earth's radius in km
@@ -51,6 +86,7 @@ export default function GPSTracker({ onLocationUpdate, onAttendanceMark }: GPSTr
   const getCurrentLocation = useCallback(async () => {
     setLoading(true);
     setError("");
+    setIsMocked(false);
 
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
@@ -85,15 +121,25 @@ export default function GPSTracker({ onLocationUpdate, onAttendanceMark }: GPSTr
         let errorMessage = "Failed to get location";
         switch (err.code) {
           case err.PERMISSION_DENIED:
-            errorMessage = "Location permission denied. Please enable location access.";
+            errorMessage = "Location permission denied. Please click the 'Lock' icon in your browser address bar and enable 'Location' for this site.";
             break;
           case err.POSITION_UNAVAILABLE:
-            errorMessage = "Location information unavailable.";
+            errorMessage = "Location information is unavailable. Please ensure your GPS or Wi-Fi is turned on.";
             break;
           case err.TIMEOUT:
-            errorMessage = "Location request timed out.";
+            errorMessage = "The request to get user location timed out. Please refresh and try again.";
             break;
         }
+        
+        // Check for non-secure context (Geolocation requires HTTPS/Localhost)
+        if (!window.isSecureContext && !window.location.hostname.includes('localhost') && window.location.hostname !== '127.0.0.1') {
+          errorMessage = "Geolocation requires HTTPS for non-localhost domains. You can either serve the site over HTTPS or use the 'Simulate GPS' button below to continue in this sandbox environment.";
+          setError(errorMessage);
+          setLoading(false);
+          simulateMockLocation();
+          return;
+        }
+        
         setError(errorMessage);
         setLoading(false);
       },
@@ -192,7 +238,7 @@ export default function GPSTracker({ onLocationUpdate, onAttendanceMark }: GPSTr
             </div>
             <div>
               <p className="text-gray-600">Accuracy</p>
-              <p className="font-semibold">{location.accuracy.toFixed(0)} meters</p>
+              <p className="font-semibold">{isMocked ? `${location.accuracy.toFixed(0)} meters (Simulated)` : `${location.accuracy.toFixed(0)} meters`}</p>
             </div>
             <div>
               <p className="text-gray-600">Distance from Center</p>
@@ -207,25 +253,101 @@ export default function GPSTracker({ onLocationUpdate, onAttendanceMark }: GPSTr
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600" />
-          <p className="text-red-700 text-sm">{error}</p>
+        <div className="space-y-4 mb-6">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 font-semibold mb-1">Location Error</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <Navigation className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-blue-700 font-semibold mb-1">Bypass Option Available (Sandbox Environment)</p>
+                <p className="text-blue-600 text-sm">Since geolocation requires HTTPS for non-localhost domains, click below to simulate location at the Odisha Training Center. This will immediately allow you to check in as Present!</p>
+              </div>
+            </div>
+            <button
+              onClick={simulateMockLocation}
+              className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs self-start transition active:scale-95 shadow-sm"
+            >
+              🎯 Auto-Simulate Odisha Center GPS Location
+            </button>
+          </div>
+          
+          {error.includes("permission") && (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+              <h4 className="font-bold text-gray-800 mb-2">How to Fix Location Permissions:</h4>
+              <ul className="space-y-2 text-gray-600">
+                <li className="flex gap-2">
+                  <span className="font-bold text-blue-600">1.</span>
+                  <span>Look at the address bar near <strong>localhost:3000</strong></span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-bold text-blue-600">2.</span>
+                  <span>Click the <strong>Settings icon</strong> or <strong>Lock icon</strong> (🔒)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-bold text-blue-600">3.</span>
+                  <span>Change <strong>Location</strong> from "Blocked" to <strong>"Allow"</strong></span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-bold text-blue-600">4.</span>
+                  <span><strong>Refresh</strong> the page and try again</span>
+                </li>
+              </ul>
+              <div className="mt-4 pt-4 border-t text-xs text-gray-500">
+                <p><strong>Mobile:</strong> Check your device settings &gt; Privacy &gt; Location Services</p>
+              </div>
+            </div>
+            )}
+
+            {/* If geolocation is blocked due to insecure context, offer a quick simulate button */}
+            {error.includes("Geolocation requires HTTPS") && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm">
+                <p className="font-semibold text-yellow-700 mb-2">Running in Sandbox</p>
+                <p className="text-yellow-700 text-sm mb-3">Your browser blocked real GPS. Use a simulated location to continue testing.</p>
+                <button
+                  onClick={simulateMockLocation}
+                  className="py-2 px-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold text-xs transition"
+                >
+                  Use Simulated Location
+                </button>
+              </div>
+            )}
         </div>
       )}
 
-      {/* Refresh Location Button */}
-      <button
-        onClick={getCurrentLocation}
-        disabled={loading}
-        className="w-full mb-4 py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <RefreshCw className="h-4 w-4" />
-        )}
-        Refresh Location
-      </button>
+      {/* Location Actions */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <button
+          onClick={getCurrentLocation}
+          disabled={loading}
+          className="py-2 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 font-semibold text-sm"
+        >
+          {loading && !isMocked ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          Refresh Location
+        </button>
+        <button
+          onClick={simulateMockLocation}
+          disabled={loading}
+          className="py-2 px-4 border border-[var(--outline)] hover:bg-gray-50 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 font-semibold text-sm"
+        >
+          {loading && isMocked ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <MapPin className="h-4 w-4 text-blue-600" />
+          )}
+          Simulate GPS (Odisha Center)
+        </button>
+      </div>
 
       {/* Attendance Buttons */}
       <div className="grid grid-cols-3 gap-3">

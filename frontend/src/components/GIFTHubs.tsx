@@ -175,11 +175,11 @@ export default function GIFTHubs() {
 
       {/* Hub Details Modal */}
       {selectedHub && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedHub(null)}
         >
-          <div 
+          <div
             className="glass p-8 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -200,20 +200,21 @@ export default function GIFTHubs() {
                   <p><strong>Address:</strong> {selectedHub.address}</p>
                   <p><strong>Phone:</strong> {selectedHub.phone}</p>
                   <p><strong>Email:</strong> {selectedHub.email}</p>
-                  <p><strong>Website:</strong> 
-                    <a href={selectedHub.website} target="_blank" className="text-[var(--brand)] hover:underline">
+                  <p>
+                    <strong>Website:</strong>{" "}
+                    <a href={selectedHub.website} target="_blank" rel="noopener noreferrer" className="text-[var(--brand)] hover:underline">
                       {selectedHub.website}
                     </a>
                   </p>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="font-semibold mb-3">Available Courses</h3>
                 <div className="space-y-2">
                   {selectedHub.courses.map((course) => (
                     <div key={course} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-[var(--brand)] rounded-full"></div>
+                      <div className="w-2 h-2 bg-[var(--brand)] rounded-full" />
                       <span className="text-sm">{course}</span>
                     </div>
                   ))}
@@ -221,8 +222,8 @@ export default function GIFTHubs() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

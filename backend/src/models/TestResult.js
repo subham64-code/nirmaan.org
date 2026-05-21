@@ -8,6 +8,8 @@ const testResultSchema = new mongoose.Schema(
     score: { type: Number, required: true },
     startedAt: { type: Date, required: true },
     submittedAt: { type: Date, required: true },
+    status: { type: String, enum: ["submitted", "auto_failed", "cheated"], default: "submitted" },
+    cheatingDetails: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true }
 );

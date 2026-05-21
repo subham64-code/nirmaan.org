@@ -74,6 +74,15 @@ export default function NotificationSystem() {
     }
   };
 
+  const clearAllNotifications = async () => {
+    try {
+      await api.delete("/notifications/clear-all");
+      await fetchNotifications();
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+    }
+  };
+
   const deleteNotification = async (id: string) => {
     try {
       await api.delete(`/notifications/${id}`);
@@ -139,6 +148,15 @@ export default function NotificationSystem() {
                 >
                   <Check className="h-3 w-3" />
                   Mark all read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={clearAllNotifications}
+                  className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Clear all
                 </button>
               )}
               <button

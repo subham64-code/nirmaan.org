@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Faculty = require("../models/Faculty");
 const Student = require("../models/Student");
+const User = require("../models/User");
 
 const facultyData = [
   {
@@ -60,181 +61,31 @@ const facultyData = [
 ];
 
 const studentData = [
-  {
-    name: "Abhijit Patra",
-    registrationNumber: "2301298082",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/001",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Ananya Bishoyi",
-    registrationNumber: "2405432008",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/002",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Animesh Samantaray",
-    registrationNumber: "2301298315",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/003",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Ankit Kumar Manjhi",
-    registrationNumber: "2301298317",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/004",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Ashis Kumar Bhuyan",
-    registrationNumber: "2301298103",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/005",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Asmit Singh",
-    registrationNumber: "2301298334",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/006",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Debasmita Swain",
-    registrationNumber: "2405432026",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/007",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Eleena Jena",
-    registrationNumber: "2405432029",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/008",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Jaychandra Das",
-    registrationNumber: "2301298146",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/009",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Kishor Kumar Sahoo",
-    registrationNumber: "2301298155",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/010",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Md Salik Ubair",
-    registrationNumber: "2301298683",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/011",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Md Wasiq Anwer",
-    registrationNumber: "2301298167",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/012",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Mohammad Hassan",
-    registrationNumber: "2301298431",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/013",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Mohammad Kashif Iqbal",
-    registrationNumber: "2421298047",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/014",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Om Prakash Behura",
-    registrationNumber: "2301298177",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/015",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Pradeep Kumar Singha",
-    registrationNumber: "2301298186",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/016",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Prajyakta Patra",
-    registrationNumber: "2405432050",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/017",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Sai Premananda Das",
-    registrationNumber: "2301298501",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/018",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Shibani Bardhan",
-    registrationNumber: "2405432079",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/019",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Sisir Pradhan",
-    registrationNumber: "2421298050",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/020",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Spandan Kumar Behera",
-    registrationNumber: "2301298551",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/021",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Subham Behera",
-    registrationNumber: "2301298564",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/022",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Subrat Narayan Nanda",
-    registrationNumber: "2301298077",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/023",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Suman Sourav Dash",
-    registrationNumber: "2301298261",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/024",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
-  {
-    name: "Sumit Raj",
-    registrationNumber: "2301298581",
-    nirmaanId: "REDINGTON/ODISHA/GIFT/025",
-    course: "AI/ML",
-    center: "REDINGTON/ODISHA/GIFT",
-  },
+  { name: "Abhijit Patra", registrationNumber: "2301298082", nirmaanId: "REDINGTON/ODISHA/GIFT/001", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Ananya Bishoyi", registrationNumber: "2405432008", nirmaanId: "REDINGTON/ODISHA/GIFT/002", course: "MCA", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Animesh Samantaray", registrationNumber: "2301298315", nirmaanId: "REDINGTON/ODISHA/GIFT/003", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Ankit Kumar Manjhi", registrationNumber: "2301298317", nirmaanId: "REDINGTON/ODISHA/GIFT/004", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Ashis Kumar Bhuyan", registrationNumber: "2301298103", nirmaanId: "REDINGTON/ODISHA/GIFT/005", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Asmit Singh", registrationNumber: "2301298334", nirmaanId: "REDINGTON/ODISHA/GIFT/006", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Debasmita Swain", registrationNumber: "2405432026", nirmaanId: "REDINGTON/ODISHA/GIFT/007", course: "MCA", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Eleena Jena", registrationNumber: "2405432029", nirmaanId: "REDINGTON/ODISHA/GIFT/008", course: "MCA", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Jaychandra Das", registrationNumber: "2301298146", nirmaanId: "REDINGTON/ODISHA/GIFT/009", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Kishor Kumar Sahoo", registrationNumber: "2301298155", nirmaanId: "REDINGTON/ODISHA/GIFT/010", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "MD Salik Ubair", registrationNumber: "2301298683", nirmaanId: "REDINGTON/ODISHA/GIFT/011", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "MD Wasiq Anwer", registrationNumber: "2301298167", nirmaanId: "REDINGTON/ODISHA/GIFT/012", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Mohammad Hassan", registrationNumber: "2301298431", nirmaanId: "REDINGTON/ODISHA/GIFT/013", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Mohammad Kashif Iqubal", registrationNumber: "2421298047", nirmaanId: "REDINGTON/ODISHA/GIFT/014", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Om Prakash Behura", registrationNumber: "2301298177", nirmaanId: "REDINGTON/ODISHA/GIFT/015", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Pradeep Kumar Singha", registrationNumber: "2301298186", nirmaanId: "REDINGTON/ODISHA/GIFT/016", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Prajayakta Patra", registrationNumber: "2405432050", nirmaanId: "REDINGTON/ODISHA/GIFT/017", course: "MCA", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Sai Premananda Das", registrationNumber: "2301298501", nirmaanId: "REDINGTON/ODISHA/GIFT/018", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Shibani Bardhan", registrationNumber: "2405432079", nirmaanId: "REDINGTON/ODISHA/GIFT/019", course: "MCA", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Sisir Pradhan", registrationNumber: "2421298050", nirmaanId: "REDINGTON/ODISHA/GIFT/020", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Spandan Kumar Behera", registrationNumber: "2301298551", nirmaanId: "REDINGTON/ODISHA/GIFT/021", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Subham Behera", registrationNumber: "2301298564", nirmaanId: "REDINGTON/ODISHA/GIFT/022", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Subrat Narayan Nanda", registrationNumber: "2301298077", nirmaanId: "REDINGTON/ODISHA/GIFT/023", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Suman Sourav Dash", registrationNumber: "2301298261", nirmaanId: "REDINGTON/ODISHA/GIFT/024", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
+  { name: "Sumit Raj", registrationNumber: "2301298581", nirmaanId: "REDINGTON/ODISHA/GIFT/025", course: "B.Tech", center: "REDINGTON/ODISHA/GIFT" },
 ];
 
 async function seedDatabase() {
@@ -247,15 +98,39 @@ async function seedDatabase() {
     // Clear existing data
     await Faculty.deleteMany({});
     await Student.deleteMany({});
+    await User.deleteMany({ role: "student" });
     console.log("Cleared existing data");
 
     // Insert faculty data
     const insertedFaculty = await Faculty.insertMany(facultyData);
     console.log(`✅ ${insertedFaculty.length} faculty members added`);
 
-    // Insert student data
-    const insertedStudents = await Student.insertMany(studentData);
-    console.log(`✅ ${insertedStudents.length} students added`);
+    // Insert student data and create linked User accounts
+    let studentCount = 0;
+    for (const sData of studentData) {
+      // 1. Create User account first to get the _id
+      // For seeding, we'll auto-approve them and set a dummy email if none exists to ensure login flows can be tested if needed.
+      const dummyEmail = `${sData.registrationNumber}@nirmaan.local`; 
+      const newUser = await User.create({
+        name: sData.name,
+        email: dummyEmail,
+        nirmaanId: sData.nirmaanId,
+        course: sData.course,
+        role: "student",
+        isApproved: true,
+        otpRequired: false
+      });
+
+      // 2. Create the Student profile linked to the User account
+      await Student.create({
+        ...sData,
+        email: dummyEmail,
+        linkedUserId: newUser._id
+      });
+      studentCount++;
+    }
+    
+    console.log(`✅ ${studentCount} students added and linked to User accounts successfully`);
 
     console.log("✅ Database seeding completed successfully!");
     process.exit(0);

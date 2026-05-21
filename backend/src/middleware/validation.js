@@ -87,6 +87,7 @@ const validateOtpVerification = [
   validateEmail,
   validateRole,
   body('otp')
+    .trim()
     .isLength({ min: 6, max: 6 })
     .isNumeric()
     .withMessage('OTP must be a 6-digit number'),

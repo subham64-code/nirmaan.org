@@ -45,19 +45,36 @@ async function extractPdfText(filePath) {
 }
 
 // Helper function to extract text from DOCX (simplified)
-async function extractDocxText(filePath) {
-  // For simple DOCX parsing, read XML content
-  // A more robust solution would use docx-parser or mammoth library
-  // For now, return placeholder - can be enhanced
-  try {
-    const DocxParser = require('docx-parser');
-    const parser = new DocxParser();
-    const doc = await parser.parseFile(filePath);
-    return doc.getFullText();
-  } catch (e) {
-    console.log('Docx parsing fallback');
-    return '';
-  }
+// Helper function to extract text from DOCX (simplified)
+function extractDocxText(filePath) {
+  return new Promise((resolve) => {
+    try {
+      const docxParser = require('docx-parser');
+      docxParser.parseDocx(filePath, (data) => {
+        resolve(data || '');
+      });
+    } catch (e) {
+      console.error('Docx parser error, running basic string extraction:', e);
+      try {
+        // Fallback: try using mammoth for more robust DOCX extraction
+        const mammoth = require('mammoth');
+        mammoth.extractRawText({ path: filePath })
+          .then(result => resolve(result.value || ''))
+          .catch(mammothErr => {
+            console.warn('Mammoth fallback failed, falling back to raw file read:', mammothErr);
+            try {
+              const fs = require('fs');
+              const content = fs.readFileSync(filePath, 'utf-8');
+              resolve(content || '');
+            } catch (innerErr) {
+              resolve('');
+            }
+          });
+      } catch (innerErr) {
+        resolve('');
+      }
+    }
+  });
 }
 
 // Helper to parse extracted text into questions using pattern matching
@@ -66,21 +83,24 @@ function parseQuestionsFromText(text) {
   const questions = [];
   let currentQuestion = null;
   
-  // Pattern: look for numbered questions (1., 2., Q1:, Question 1:, etc)
-  const questionPattern = /^(\d+[\.\)]|Q\d+:|Question\s+\d+:|\*\*\d+\.\*\*)\s+(.+)$/i;
-  const optionPattern = /^([A\-D]|[a\-d]|Option\s+[A\-D])\s*[\.\)]\s*(.+)$/i;
-  const answerPattern = /^(Answer|Correct|Ans|Answer Key):\s*([A\-D]|[a\-d]|\d+)$/i;
+  // Patterns
+  const questionPattern = /^(\d+[\.\)]|Q\d+:|Question\s+\d+:|\*\*\d+\.\*\*|\-\s+)\s*(.+)$/i;
+  const optionPattern = /^([A\-F]|[a\-f]|Option\s+[A\-F])\s*[\.\)\-:]\s*(.+)$/i;
+  const answerPattern = /^(Answer|Correct|Ans|Answer\s*Key|Key):\s*([A\-F]|[a\-f]|\d+)$/i;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
+    // Check if it's a question
     const qMatch = line.match(questionPattern);
-    if (qMatch) {
-      if (currentQuestion && currentQuestion.question) {
+    const isQuestionLine = qMatch || (line.endsWith('?') && line.length > 15 && !line.match(optionPattern));
+    
+    if (isQuestionLine) {
+      if (currentQuestion && currentQuestion.question && currentQuestion.options.length >= 2) {
         questions.push(currentQuestion);
       }
       currentQuestion = {
-        question: qMatch[2],
+        question: qMatch ? qMatch[2].trim() : line.trim(),
         options: [],
         correctAnswer: null,
         marks: 1
@@ -93,16 +113,23 @@ function parseQuestionsFromText(text) {
       if (oMatch) {
         currentQuestion.options.push({
           label: oMatch[1].toUpperCase().charAt(0),
-          text: oMatch[2]
+          text: oMatch[2].trim()
         });
-      } else if (line.match(answerPattern)) {
+      } else {
         const aMatch = line.match(answerPattern);
-        currentQuestion.correctAnswer = aMatch[2].toUpperCase().charAt(0);
+        if (aMatch) {
+          currentQuestion.correctAnswer = aMatch[2].toUpperCase().charAt(0);
+        } else if (line.length > 0 && currentQuestion.options.length < 4 && !line.startsWith('Question') && !line.startsWith('Q')) {
+          currentQuestion.options.push({
+            label: String.fromCharCode(65 + currentQuestion.options.length),
+            text: line.trim()
+          });
+        }
       }
     }
   }
   
-  if (currentQuestion && currentQuestion.question) {
+  if (currentQuestion && currentQuestion.question && currentQuestion.options.length >= 2) {
     questions.push(currentQuestion);
   }
   
@@ -158,10 +185,34 @@ router.post('/extract', authenticate, upload.single('document'), async (req, res
 // GET /api/questions - List all questions for teacher
 router.get('/', authenticate, async (req, res) => {
   try {
-    const questions = await Question.find({ teacherId: req.user._id }).sort({ createdAt: -1 });
+    const ownerId = req.user.sub;
+    const role = req.user.role;
+    const query = role === "admin" ? {} : { teacherId: ownerId };
+    const questions = await Question.find(query).sort({ createdAt: -1 });
     res.json(questions);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch questions' });
+  }
+});
+
+// GET /api/questions/predefined - Question bank for exam creation
+router.get('/predefined', authenticate, async (req, res) => {
+  try {
+    const ownerId = req.user.sub;
+    const role = req.user.role;
+    const query = role === "admin" ? {} : { teacherId: ownerId };
+    const questions = await Question.find(query)
+      .select("question options correctAnswer marks category difficulty")
+      .sort({ createdAt: -1 })
+      .limit(300);
+
+    res.json({
+      success: true,
+      data: questions,
+      message: "Question bank loaded",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch question bank' });
   }
 });
 
@@ -175,7 +226,7 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const newQuestion = new Question({
-      teacherId: req.user._id,
+      teacherId: req.user.sub,
       question,
       options,
       correctAnswer,
@@ -200,7 +251,7 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Question not found' });
     }
 
-    if (question.teacherId.toString() !== req.user._id.toString()) {
+    if (req.user.role !== "admin" && question.teacherId.toString() !== String(req.user.sub)) {
       return res.status(403).json({ error: 'Unauthorized to delete this question' });
     }
 

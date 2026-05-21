@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Clock, BookOpen, CheckCircle, AlertCircle, Play, ChevronRight, ChevronLeft, Flag, RotateCcw } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Clock, BookOpen, CheckCircle, AlertCircle, Play, ChevronRight, ChevronLeft, Flag, RotateCcw, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Question {
@@ -36,6 +36,10 @@ export default function ExamSystem() {
   const [testCompleted, setTestCompleted] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [violations, setViolations] = useState(0);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const testContainerRef = useRef<HTMLDivElement>(null);
+  const windowFocusedRef = useRef(true);
 
   useEffect(() => {
     fetchAvailableTests();
@@ -55,6 +59,27 @@ export default function ExamSystem() {
       return () => clearInterval(timer);
     }
   }, [testStarted, timeLeft]);
+
+  // Browser-level blocking is removed; proctoring logs and timed submission remain.
+  useEffect(() => {
+    if (!testStarted) return;
+  }, [testStarted]);
+
+  const logViolation = async (eventType: string, metadata: any = {}) => {
+    setViolations((prev) => prev + 1);
+
+    try {
+      if (!activeTest) return;
+      // Log to backend
+      await api.post("/tests/proctoring/log-event", {
+        testId: activeTest._id,
+        eventType,
+        metadata,
+      });
+    } catch (error) {
+      console.error("Failed to log violation:", error);
+    }
+  };
 
   const fetchAvailableTests = async () => {
     try {
@@ -76,6 +101,8 @@ export default function ExamSystem() {
     setTestStarted(true);
     setTestCompleted(false);
     setResult(null);
+    setViolations(0);
+    setWarningMessage(null);
   };
 
   const handleAnswerSelect = (questionId: string, optionIndex: number) => {
@@ -87,9 +114,13 @@ export default function ExamSystem() {
 
     try {
       setLoading(true);
+
+      // Check proctoring violations and flag if necessary
       const response = await api.post(`/tests/${activeTest._id}/submit`, {
         answers,
         startedAt: new Date(Date.now() - (activeTest.durationMinutes * 60 - timeLeft) * 1000).toISOString(),
+        violations,
+        proctoringVerified: violations < 5, // Flag if too many violations
       });
 
       if (response.data.success) {
@@ -100,6 +131,11 @@ export default function ExamSystem() {
         });
         setTestCompleted(true);
         setTestStarted(false);
+
+        // Exit fullscreen
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
       }
     } catch (error) {
       console.error("Failed to submit test:", error);
@@ -158,6 +194,18 @@ export default function ExamSystem() {
           </div>
         </div>
 
+        {violations > 0 && (
+          <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2 text-yellow-800">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Proctoring Note</p>
+                <p className="text-sm">{violations} suspicious activity/activities were detected during your exam. This may affect your score.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={() => {
             setTestCompleted(false);
@@ -179,16 +227,32 @@ export default function ExamSystem() {
     const progress = ((currentQuestion + 1) / activeTest.questions.length) * 100;
 
     return (
-      <div className="bg-white rounded-lg shadow-lg border">
+      <div ref={testContainerRef} className="bg-white rounded-lg shadow-lg border">
+        {/* Warning Messages */}
+        {warningMessage && (
+          <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <p className="text-yellow-800 font-medium text-sm">{warningMessage}</p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
           <div>
             <h2 className="font-bold text-lg">{activeTest.title}</h2>
             <p className="text-sm text-gray-500">{activeTest.course}</p>
           </div>
-          <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${getTimeColor()}`}>
-            <Clock className="h-5 w-5" />
-            <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
+          <div className="flex items-center gap-4">
+            <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${getTimeColor()}`}>
+              <Clock className="h-5 w-5" />
+              <span className="font-mono font-bold">{formatTime(timeLeft)}</span>
+            </div>
+            {violations > 0 && (
+              <div className="px-3 py-2 bg-red-50 rounded-lg flex items-center gap-1 text-red-600 text-sm font-medium">
+                <AlertTriangle className="w-4 h-4" />
+                {violations} flags
+              </div>
+            )}
           </div>
         </div>
 
@@ -248,6 +312,91 @@ export default function ExamSystem() {
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
+          </button>
+
+          <div className="flex gap-2">
+            {currentQuestion < activeTest.questions.length - 1 ? (
+              <button
+                onClick={() => setCurrentQuestion((prev) => prev + 1)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmitTest}
+                disabled={loading}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Flag className="h-4 w-4" />
+                {loading ? "Submitting..." : "Submit Test"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Available Tests List
+  return (
+    <div className="bg-white rounded-lg shadow-lg border p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-3 bg-green-100 rounded-lg">
+          <BookOpen className="h-6 w-6 text-green-600" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold">Exam Center</h2>
+          <p className="text-sm text-gray-500">Take tests and exams</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-8 text-center text-gray-500">Loading tests...</div>
+      ) : availableTests.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">
+          <BookOpen className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+          <p>No tests available</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {availableTests.map((test) => (
+            <div key={test._id} className="border rounded-lg p-4 hover:shadow-md transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg">{test.title}</h3>
+                  <p className="text-sm text-gray-500">{test.course}</p>
+                  <div className="flex gap-4 mt-2 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {test.durationMinutes} minutes
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="h-4 w-4" />
+                      {test.questions?.length || 0} questions
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Flag className="h-4 w-4" />
+                      {test.totalMarks} marks
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => startTest(test)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Test
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
           </button>
 
           <div className="flex gap-2">

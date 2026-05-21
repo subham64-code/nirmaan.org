@@ -124,7 +124,7 @@ export default function TeacherAssessmentPage() {
               <div className="p-4 rounded-lg bg-[var(--surface-2)]">
                 <p className="text-xs text-[var(--muted)] mb-1">Percentage</p>
                 <p className="text-3xl font-bold text-[var(--brand)]">
-                  {((testResult.score / testResult.test.totalMarks) * 100).toFixed(1)}%
+                  {testResult.test.totalMarks > 0 ? ((testResult.score / testResult.test.totalMarks) * 100).toFixed(1) : "0.0"}%
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-[var(--surface-2)]">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, authHeader } from "@/lib/api";
+import { api, authHeader, getMediaUrl } from "@/lib/api";
 import DashboardShell from "@/components/DashboardShell";
 
 type ApplicationRow = {
@@ -9,11 +9,12 @@ type ApplicationRow = {
   name: string;
   email: string;
   phone: string;
+  aadhaar: string;
+  age: number;
+  dateOfBirth: string;
   qualification: string;
   course: string;
-  tenthMarks: number;
-  twelfthMarks: number;
-  degreeMarks: number;
+  photo: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
 };
@@ -24,43 +25,98 @@ export default function ApplicationsReviewPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [remarks, setRemarks] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [isLoading, setIsLoading] = useState(false);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nirmaan_token") || "" : "";
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const response = await api.get(`/applications?status=${filter}`, {
-          headers: authHeader(token),
-        });
-        setApplications(response.data.data || []);
-      } catch {
-        setMessage("Failed to load applications.");
-      }
-    };
-    load();
+    loadApplications();
   }, [filter, token]);
 
-  const handleReview = async (applicationId: string, action: "approved" | "rejected") => {
+  const loadApplications = async () => {
     try {
-      await api.patch(
+      const response = await api.get(`/applications?status=${filter}`, {
+        headers: authHeader(token),
+      });
+      setApplications(response.data.data || []);
+      setMessage("");
+    } catch (error) {
+      console.error("Failed to load applications:", error);
+      setMessage("Failed to load applications.");
+      setMessageType("error");
+      setApplications([]);
+    }
+  };
+
+  const handleReview = async (applicationId: string, action: "approved" | "rejected") => {
+    if (!applicationId) {
+      setMessage("Error: Invalid application ID");
+      setMessageType("error");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      // Make the review request
+      const response = await api.patch(
         `/applications/${applicationId}/review`,
         { action, remarks },
         { headers: authHeader(token) }
       );
-      setMessage(`Application ${action}.`);
+
+      if (!response.data) {
+        throw new Error("No response data received");
+      }
+
+      // Show success message
+      setMessage(
+        action === "approved"
+          ? "✓ Application approved and student account created!"
+          : "✓ Application rejected successfully!"
+      );
+      setMessageType("success");
+      
+      // Clear selection and remarks
       setSelected(null);
       setRemarks("");
-      setApplications((prev) => prev.filter((a) => a._id !== applicationId));
-    } catch {
-      setMessage("Failed to update application.");
+
+      // Wait a moment to show success message, then reload
+      setTimeout(() => {
+        loadApplications();
+        setIsLoading(false);
+      }, 500);
+    } catch (error: any) {
+      setIsLoading(false);
+      console.error("Failed to update application:", error);
+      
+      // Provide detailed error message
+      let errorMessage = "Failed to update application.";
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.status === 400) {
+        errorMessage = "Invalid action or application state error.";
+      } else if (error?.response?.status === 404) {
+        errorMessage = "Application not found.";
+      } else if (error?.response?.status === 401) {
+        errorMessage = "You are not authorized to perform this action.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      setMessage(errorMessage);
+      setMessageType("error");
+      
+      // Reload to sync with server state
+      setTimeout(() => {
+        loadApplications();
+      }, 1000);
     }
   };
 
   const selectedApp = applications.find((a) => a._id === selected);
-  const avgMarks = selectedApp
-    ? Math.round(((selectedApp.tenthMarks + selectedApp.twelfthMarks + selectedApp.degreeMarks) / 3) * 100) / 100
-    : 0;
 
   return (
     <DashboardShell
@@ -115,25 +171,31 @@ export default function ApplicationsReviewPage() {
         <div className="glass p-6 h-fit sticky top-6">
           {selectedApp ? (
             <div className="space-y-4">
+              {selectedApp.photo && (
+                <div className="w-full h-40 rounded-lg overflow-hidden border mb-4">
+                  <img src={getMediaUrl(selectedApp.photo)} alt="Student" className="w-full h-full object-cover" />
+                </div>
+              )}
               <div>
-                <h3 className="text-2xl">{selectedApp.name}</h3>
+                <h3 className="text-2xl font-bold">{selectedApp.name}</h3>
                 <p className="text-sm text-[var(--muted)]">{selectedApp.email}</p>
               </div>
 
               <div className="space-y-2 text-sm">
                 <p><strong>Phone:</strong> {selectedApp.phone}</p>
+                <p><strong>Aadhaar:</strong> {selectedApp.aadhaar}</p>
+                <p><strong>DOB:</strong> {selectedApp.dateOfBirth} (Age: {selectedApp.age})</p>
                 <p><strong>Course:</strong> {selectedApp.course}</p>
                 <p><strong>Qualification:</strong> {selectedApp.qualification}</p>
               </div>
 
-              <div className="rounded-lg border border-[var(--outline)] p-3 space-y-1 text-xs">
-                <p><strong>10th:</strong> {selectedApp.tenthMarks}</p>
-                <p><strong>12th:</strong> {selectedApp.twelfthMarks}</p>
-                <p><strong>Degree:</strong> {selectedApp.degreeMarks}</p>
-                <p className="mt-2 font-semibold text-[var(--brand)]">Avg: {avgMarks}</p>
-              </div>
+              {message && (
+                <div className={`text-xs p-3 rounded-lg ${messageType === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                  {message}
+                </div>
+              )}
 
-              {selectedApp.status === "pending" && (
+              {(selectedApp.status === "pending" || selectedApp.status === "rejected") && (
                 <>
                   <textarea
                     className="w-full rounded-lg border border-[var(--outline)] p-2 text-xs"
@@ -141,25 +203,26 @@ export default function ApplicationsReviewPage() {
                     placeholder="Remarks (optional)"
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
+                    disabled={isLoading}
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReview(selectedApp._id, "approved")}
-                      className="flex-1 rounded-full bg-green-600 py-2 text-xs font-semibold text-white"
+                      disabled={isLoading}
+                      className="flex-1 rounded-full bg-green-600 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
-                      Approve
+                      {isLoading ? "Processing..." : "Approve"}
                     </button>
                     <button
                       onClick={() => handleReview(selectedApp._id, "rejected")}
-                      className="flex-1 rounded-full bg-red-600 py-2 text-xs font-semibold text-white"
+                      disabled={isLoading}
+                      className="flex-1 rounded-full bg-red-600 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
-                      Reject
+                      {isLoading ? "Processing..." : "Reject"}
                     </button>
                   </div>
                 </>
               )}
-
-              {message && <p className="text-xs text-[var(--brand)]">{message}</p>}
             </div>
           ) : (
             <p className="text-sm text-[var(--muted)]">Select an application to review.</p>

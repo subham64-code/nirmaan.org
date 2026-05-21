@@ -186,7 +186,7 @@ async function buildKnowledgeFallbackReply(message) {
 }
 
 function buildFallbackQuestions({ topic, difficulty, count, questionType }) {
-  const total = Math.max(1, Math.min(Number(count) || 5, 10));
+  const total = Math.max(1, Math.min(Number(count) || 5, 200));
   const safeTopic = String(topic || "the topic");
   const items = [];
 
@@ -379,6 +379,8 @@ async function chat({ provider = "auto", message, context = "" }) {
 async function generateQuestions({ provider = "ollama", topic, difficulty = "medium", count = 5, questionType = "mcq" }) {
   const prompt = [
     `Generate ${count} ${difficulty} level ${questionType.toUpperCase()} questions on the topic: "${topic}".`,
+    "Focus on practical, scenario-based, and tricky questions with strong distractors.",
+    "If the topic is C, Java, Python, MERN, AI/ML, Deep Learning, NLP, or GenAI, make the questions domain-specific and hard enough for assessment use.",
     "Return JSON only with this structure:",
     `[{\"question\": \"\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correctAnswer\": \"A\", \"type\": \"${questionType}\"}]`,
     "Keep the output strict and machine-readable.",

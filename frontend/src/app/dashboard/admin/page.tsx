@@ -6,11 +6,12 @@ import DashboardShell from "@/components/DashboardShell";
 import Link from "next/link";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import { motion } from "framer-motion";
-import { Users, Clock, Award, TestTube, CheckCircle, AlertCircle, Bell, Send, BarChart3, MapPin, BookOpen } from "lucide-react";
+import { Users, Clock, Award, TestTube, CheckCircle, AlertCircle, BarChart3, FileText, Shield } from "lucide-react";
 import NotificationSystem from "@/components/NotificationSystem";
-import AIQuestionGenerator from "@/components/AIQuestionGenerator";
-import GPSTracker from "@/components/GPSTracker";
+import GPSBasedAttendance from "@/components/GPSBasedAttendance";
+import AttendanceAnalyticsChart from "@/components/AttendanceAnalyticsChart";
 import { dailyAttendanceReportUrl } from "@/lib/constants";
+import { proctoringLaunchUrl } from "@/lib/constants";
 
 type DashboardData = {
   totalStudents: number;
@@ -35,16 +36,20 @@ export default function AdminDashboard() {
 
   return (
     <DashboardShell
-      title="Admin Control Center"
-      subtitle="Real-time analytics, approvals, and platform governance"
+      title="Super Admin Control Center"
+      subtitle="Global analytics, approvals, platform governance and system configuration"
       nav={[
         { href: "/dashboard/admin", label: "Overview" },
         { href: "/dashboard/admin/applications", label: "Applications" },
         { href: "/dashboard/admin/teachers", label: "Teachers" },
+        { href: "/dashboard/admin/departments", label: "Departments" },
+        { href: "/dashboard/admin/semester-control", label: "Semester Control" },
         { href: "/dashboard/admin/attendance", label: "Attendance Sync" },
         { href: "/dashboard/admin/attendance-verification", label: "Verify Attendance" },
         { href: "/dashboard/admin/attendance-analytics", label: "Analytics" },
+        { href: "/dashboard/admin/exam-reviews", label: "Exam Reviews" },
         { href: "/dashboard/admin/leave-requests", label: "Leave Requests" },
+        { href: "/dashboard/admin/audit-logs", label: "Audit Logs" },
         { href: "/dashboard/admin/media", label: "Media" },
         { href: "/dashboard/admin/ai-assistant", label: "AI Assistant" },
         { href: "/dashboard/admin/communication-test", label: "Test Comms" },
@@ -57,17 +62,9 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.02 }}
       >
-        <GPSTracker />
+        <GPSBasedAttendance compact={true} />
       </motion.section>
 
-      {/* AI Question Generator for Admin - Content Creation */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.04 }}
-      >
-        <AIQuestionGenerator />
-      </motion.section>
       {/* KPI Cards Grid */}
       <motion.div className="grid gap-6 md:grid-cols-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <AnimatedCard
@@ -107,7 +104,21 @@ export default function AdminDashboard() {
         />
       </motion.div>
 
-      {/* Quick Actions */}
+      {/* Analytics Charts */}
+      <motion.section
+        className="glass mt-8 p-6 rounded-2xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <BarChart3 className="text-[var(--brand)]" />
+          <h2 className="text-2xl font-bold">Platform Analytics</h2>
+        </div>
+        <AttendanceAnalyticsChart />
+      </motion.section>
+
+      {/* Super Admin Quick Actions */}
       <motion.section
         className="glass mt-8 p-6 rounded-2xl"
         initial={{ opacity: 0, y: 20 }}
@@ -122,8 +133,13 @@ export default function AdminDashboard() {
           {[
             { href: "/dashboard/admin/applications", label: "Review Applications", color: "from-blue-500 to-blue-600" },
             { href: "/dashboard/admin/teachers", label: "Manage Teachers", color: "from-purple-500 to-purple-600" },
+            { href: "/dashboard/admin/departments", label: "Departments", color: "from-cyan-500 to-teal-600" },
+            { href: "/dashboard/admin/semester-control", label: "Semester Control", color: "from-orange-500 to-amber-600" },
             { href: "/dashboard/admin/media", label: "Upload Media", color: "from-pink-500 to-pink-600" },
-            { href: "/courses", label: "Update Courses", color: "from-green-500 to-green-600" },
+            { href: "/dashboard/admin/audit-logs", label: "Audit Logs", color: "from-red-500 to-rose-600" },
+            { href: "/attendance-system", label: "Attendance System", color: "from-green-500 to-emerald-600" },
+            { href: "/dashboard/admin/exam-reviews", label: "Exam Management", color: "from-cyan-500 to-blue-600" },
+            { href: "/exam", label: "Open Exam Portal", color: "from-indigo-500 to-indigo-700" },
           ].map((action, i) => (
             <motion.div key={i} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
@@ -134,6 +150,23 @@ export default function AdminDashboard() {
               </Link>
             </motion.div>
           ))}
+        </div>
+      </motion.section>
+
+      {/* Admin: Quick access to AI proctoring service */}
+      <motion.section
+        className="glass mt-6 p-6 rounded-2xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.52 }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="text-orange-500" />
+          <h2 className="text-2xl font-bold">AI Proctoring</h2>
+        </div>
+        <div className="grid md:grid-cols-2 gap-3">
+          <button onClick={() => window.open('/exam', '_self')} className="p-4 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold">Open Exam Portal</button>
+          <button onClick={() => window.open(proctoringLaunchUrl, '_blank', 'noopener')} className="p-4 rounded-xl border border-[var(--outline)] font-semibold">Launch AI Proctoring</button>
         </div>
       </motion.section>
 
@@ -148,18 +181,38 @@ export default function AdminDashboard() {
         <div className="grid gap-3 md:grid-cols-2">
           {[
             { href: "/dashboard/admin/google-sheets", label: "Google Sheets Sync", icon: "📊" },
+            { href: "#", label: "Trigger Attendance Alerts", icon: "⚠️", onClick: async () => {
+              try {
+                const token = localStorage.getItem("nirmaan_token") || "";
+                const res = await api.post("/attendance/alert/low-attendance", { threshold: 75 }, { headers: authHeader(token) });
+                alert(res.data.message || "Alerts triggered successfully");
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Unknown error";
+                alert("Failed to trigger alerts: " + message);
+              }
+            }},
             { href: "/dashboard/admin/sms", label: "Send SMS Alerts", icon: "💬" },
             { href: "/dashboard/admin/communication-test", label: "Test Communications", icon: "🧪" },
             { href: "/dashboard/admin/ai-assistant", label: "AI Assistant & Content", icon: "🤖" },
           ].map((service, i) => (
             <motion.div key={i} whileHover={{ y: -4 }}>
-              <Link
-                href={service.href}
-                className="flex items-center gap-3 p-4 rounded-xl border border-[var(--outline)] hover:bg-[var(--surface-2)] transition-all"
-              >
-                <span className="text-2xl">{service.icon}</span>
-                <span className="font-semibold">{service.label}</span>
-              </Link>
+              {service.onClick ? (
+                <button
+                  onClick={service.onClick}
+                  className="flex w-full items-center gap-3 p-4 rounded-xl border border-[var(--outline)] hover:bg-[var(--surface-2)] transition-all text-left"
+                >
+                  <span className="text-2xl">{service.icon}</span>
+                  <span className="font-semibold">{service.label}</span>
+                </button>
+              ) : (
+                <Link
+                  href={service.href}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-[var(--outline)] hover:bg-[var(--surface-2)] transition-all"
+                >
+                  <span className="text-2xl">{service.icon}</span>
+                  <span className="font-semibold">{service.label}</span>
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>
@@ -171,18 +224,33 @@ export default function AdminDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.65 }}
       >
-        <h2 className="text-2xl font-bold mb-4">Daily Attendance Report</h2>
-        <p className="text-sm text-[var(--muted)] mb-4">
-          View the published attendance sheet directly from the dashboard.
-        </p>
-        <a
-          href={dailyAttendanceReportUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex rounded-full bg-[var(--brand)] px-5 py-2 font-semibold text-white"
-        >
-          Open Google Sheet Report
-        </a>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <FileText className="text-[var(--brand)]" />
+              Manual Attendance View
+            </h2>
+            <p className="text-sm text-[var(--muted)]">
+              View the published attendance sheet directly from the dashboard.
+            </p>
+          </div>
+          <a
+            href={dailyAttendanceReportUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2 font-semibold text-white hover:opacity-90 transition-opacity"
+          >
+            <span>Open in Full Screen</span>
+          </a>
+        </div>
+        
+        <div className="w-full h-[600px] rounded-xl overflow-hidden border border-[var(--outline)] bg-white">
+          <iframe 
+            src={dailyAttendanceReportUrl.replace('/edit?', '/htmlembed?').replace('/pubhtml', '/pubhtml?widget=true&headers=false')}
+            className="w-full h-full border-0"
+            title="Attendance Report Google Sheet"
+          />
+        </div>
       </motion.section>
 
       {/* Admin Logs */}

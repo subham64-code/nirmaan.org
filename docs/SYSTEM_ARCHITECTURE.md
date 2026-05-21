@@ -429,7 +429,48 @@ backend/
 └─────────────────────────────────────┘
 ```
 
-### 10. Monitoring & Logging
+### 10. Exam and Proctoring Flow
+
+The live exam experience is split across the main Next.js site, the Node.js test API, and the Flask proctoring service.
+
+```mermaid
+sequenceDiagram
+   participant Student
+   participant Next as Next.js UI
+   participant API as Node Test API
+   participant Proctor as Flask Proctoring
+   participant DB as MongoDB
+   participant Notify as Notification Service
+
+   Student->>Next: Open /exam or dashboard exam page
+   Next->>API: GET /api/tests/:id/can-attempt
+   API->>DB: Check test window + existing attempt
+   DB-->>API: Attempt allowed or blocked
+   API-->>Next: canAttempt response
+   Next->>API: POST /api/tests/:id/submit on completion
+   API->>DB: Save result + prevent duplicate attempts
+   API->>Notify: Send student + teacher + admin notifications
+   Next->>Proctor: POST webcam frame checks
+   Proctor-->>Next: Face / gaze / people detections
+   Next->>API: POST /api/tests/proctoring/log-event for suspicious events
+   API->>DB: Store proctoring logs and flags
+```
+
+**Rules enforced in the live flow:**
+- A student can only submit one result per test.
+- The backend checks the active test window before allowing submission.
+- Suspicious proctoring events notify the test creator and admins.
+- The UI no longer blocks right-click, tab switching, or fullscreen behavior.
+
+### 11. CI/CD Pipeline
+
+The repository includes a GitHub Actions workflow at [.github/workflows/ci.yml](../.github/workflows/ci.yml) that validates the main platform layers:
+
+- Backend job: installs dependencies in [backend](../backend) and runs `npm test`.
+- Frontend job: installs dependencies in [frontend](../frontend) and runs `npm run build`.
+- Proctoring job: installs Python dependencies in [nirmaan_exam.org](../nirmaan_exam.org) and compiles the Flask modules with `py_compile`.
+
+### 12. Monitoring & Logging
 
 **Logging Strategy:**
 - Application logs: Winston or custom logger

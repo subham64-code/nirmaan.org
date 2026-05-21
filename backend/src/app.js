@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const fs = require("fs");
 const env = require("./config/env");
 const { securityMiddleware, trustProxy } = require("./config/production");
 
@@ -26,6 +27,14 @@ const googleAuthRoutes = require("./routes/googleAuth.routes");
 const questionsRoutes = require("./routes/questions.routes");
 
 const app = express();
+
+// Ensure logs directory exists for error logging
+try {
+  const logsDir = path.join(__dirname, '..', 'logs');
+  if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+} catch (e) {
+  console.error('Failed to create logs directory', e && e.message ? e.message : e);
+}
 
 // Trust proxy for rate limiting in production
 trustProxy(app);
@@ -56,7 +65,7 @@ app.use(cookieParser());
 // Additional rate limiting for sensitive endpoints
 const sensitiveRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 1000, // Relaxed to support 100+ concurrent students on shared college Wi-Fi
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later.'
@@ -87,6 +96,8 @@ app.use("/api/auth/request-otp", sensitiveRateLimit);
 app.use("/api/auth/verify-otp", sensitiveRateLimit);
 app.use("/api/auth/student-login", sensitiveRateLimit);
 
+const testCommRoutes = require("./routes/test-comm.routes");
+
 app.use("/api/auth", authRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/students", studentRoutes);
@@ -103,6 +114,34 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/leave-requests", leaveRoutes);
 app.use("/api/auth", googleAuthRoutes);
 app.use("/api/questions", questionsRoutes);
+app.use("/api/test", testCommRoutes);
+
+// Response logger to capture 5xx responses for troubleshooting
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    try {
+      const duration = Date.now() - start;
+      if (res.statusCode >= 500) {
+        const rec = {
+          method: req.method,
+          url: req.originalUrl || req.url,
+          status: res.statusCode,
+          duration,
+          body: req.body && Object.keys(req.body).length ? req.body : undefined,
+          timestamp: new Date().toISOString(),
+          ip: req.ip
+        };
+        const logFile = path.join(__dirname, '..', 'logs', 'requests.log');
+        fs.appendFileSync(logFile, JSON.stringify(rec) + '\n', { encoding: 'utf8' });
+        console.warn('Logged 5xx response:', rec.method, rec.url, rec.status);
+      }
+    } catch (e) {
+      console.error('Failed to write request log:', e && e.message ? e.message : e);
+    }
+  });
+  next();
+});
 
 // 404 handler
 app.use((_, res) => {
@@ -116,14 +155,22 @@ app.use((_, res) => {
 // Global error handler
 app.use((error, req, res, next) => {
   // Log error details
-  console.error('Global error handler:', {
-    message: error.message,
-    stack: error.stack,
+  const errPayload = {
+    message: error && error.message ? error.message : String(error),
+    stack: error && error.stack ? error.stack : undefined,
     url: req.url,
     method: req.method,
     ip: req.ip,
     timestamp: new Date().toISOString()
-  });
+  };
+  console.error('Global error handler:', errPayload);
+  // Append to persistent log for post-mortem
+  try {
+    const logFile = path.join(__dirname, '..', 'logs', 'errors.log');
+    fs.appendFileSync(logFile, JSON.stringify(errPayload) + '\n', { encoding: 'utf8' });
+  } catch (e) {
+    console.error('Failed to write error log:', e && e.message ? e.message : e);
+  }
 
   // Don't leak error details in production
   const isDevelopment = env.nodeEnv === 'development';

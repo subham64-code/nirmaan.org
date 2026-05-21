@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, User, MapPin, Calendar, Award } from "lucide-react";
+import { Play, User, Award } from "lucide-react";
 
 interface Faculty {
   id: string;
@@ -161,7 +161,7 @@ export default function FacultyIntroVideos() {
                 onClick={() => setSelectedFaculty(null)}
                 className="text-[var(--muted)] hover:text-[var(--foreground)]"
               >
-                X
+                ✕
               </button>
             </div>
 
@@ -207,9 +207,9 @@ export default function FacultyIntroVideos() {
                 </div>
               </div>
             </div>
-            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
   );
 }

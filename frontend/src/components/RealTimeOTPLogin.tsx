@@ -79,7 +79,7 @@ export default function RealTimeOTPLogin({ role }: OTPLoginProps) {
         ease: "power3.out"
       });
     }
-  }, [countdown]);
+  }, []);
 
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (typeof error === "object" && error !== null) {
@@ -162,6 +162,7 @@ export default function RealTimeOTPLogin({ role }: OTPLoginProps) {
         localStorage.setItem("nirmaan_token", token);
         localStorage.setItem("nirmaan_user", JSON.stringify(user));
         localStorage.setItem("nirmaan_user_name", user.name || user.email);
+        localStorage.setItem("nirmaan_role", role);
         setIsVerified(true);
         
         setMessage("✅ Login successful! Redirecting...");
@@ -201,6 +202,7 @@ export default function RealTimeOTPLogin({ role }: OTPLoginProps) {
     localStorage.setItem("nirmaan_user", JSON.stringify(user));
     localStorage.setItem("nirmaan_user_name", user.name || user.email);
     localStorage.setItem("nirmaan_user_picture", user.picture || "");
+    localStorage.setItem("nirmaan_role", role);
 
     setMessage("✅ OAuth login successful! Redirecting...");
     setTimeout(() => {
@@ -212,20 +214,21 @@ export default function RealTimeOTPLogin({ role }: OTPLoginProps) {
     setMessage(`❌ OAuth login failed: ${error}`);
   };
 
+  const roleBackgroundClass =
+    role === "admin"
+      ? "bg-slate-900"
+      : role === "teacher"
+      ? "bg-blue-950"
+      : "bg-emerald-950";
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{
-      backgroundImage: role === "admin" 
-        ? "url('/attendance-media/about-us-background.mp4')"
-        : role === "teacher"
-        ? "url('/attendance-media/smart-lab-background.mp4')"
-        : "url('/attendance-media/location-demo.mp4')",
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      position: 'relative'
-    }}>
+    <div className={`min-h-screen flex items-center justify-center p-4 relative ${roleBackgroundClass}`}>
       <div className="absolute inset-0 bg-black/40"></div>
       <div className="w-full max-w-md">
-        <div ref={containerRef} className="glass p-8 rounded-2xl">
+        <div 
+          ref={containerRef} 
+          className="glass p-8 rounded-2xl min-h-[550px] flex flex-col transition-all duration-500 ease-in-out shadow-2xl relative overflow-hidden"
+        >
           {/* Header */}
           <div className="text-center mb-8">
             {role === "admin" && (
@@ -424,7 +427,7 @@ export default function RealTimeOTPLogin({ role }: OTPLoginProps) {
           )}
 
           {/* Powered By */}
-          <div className="mt-6 pt-6 border-t border-[var(--outline)] text-center">
+          <div className="mt-auto pt-6 border-t border-[var(--outline)] text-center">
             <p className="text-xs text-[var(--muted)]">
               Powered by  Nirmaan.org
             </p>

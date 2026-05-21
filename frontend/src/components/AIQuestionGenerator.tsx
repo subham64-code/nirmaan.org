@@ -11,10 +11,14 @@ interface Question {
   explanation: string;
 }
 
-export default function AIQuestionGenerator() {
+export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole?: "teacher" | "admin" | "student" }) {
+  if (userRole !== "teacher") {
+    return null;
+  }
+
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(20);
   const [questionType, setQuestionType] = useState("mcq");
   const [provider, setProvider] = useState("gemini");
   const [loading, setLoading] = useState(false);
@@ -85,7 +89,7 @@ export default function AIQuestionGenerator() {
         </div>
         <div>
           <h2 className="text-xl font-bold">AI Question Generator</h2>
-          <p className="text-sm text-gray-500">Generate exam questions using AI</p>
+          <p className="text-sm text-gray-500">Teacher-only generator for assessment question banks</p>
         </div>
       </div>
 
@@ -96,13 +100,22 @@ export default function AIQuestionGenerator() {
             <BookOpen className="h-4 w-4 inline mr-1" />
             Topic
           </label>
-          <input
-            type="text"
+          <select
+            title="Select question topic"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g., JavaScript Basics, Machine Learning, Soft Skills"
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
+          >
+            <option value="">Select a topic</option>
+            <option value="C Programming">C Programming</option>
+            <option value="Java">Java</option>
+            <option value="Python">Python</option>
+            <option value="MERN Stack">MERN Stack</option>
+            <option value="AI/ML">AI/ML</option>
+            <option value="Deep Learning">Deep Learning</option>
+            <option value="NLP">NLP</option>
+            <option value="GenAI">GenAI</option>
+          </select>
         </div>
 
         <div>
@@ -111,6 +124,7 @@ export default function AIQuestionGenerator() {
             Difficulty
           </label>
           <select
+            title="Select difficulty"
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
@@ -125,8 +139,9 @@ export default function AIQuestionGenerator() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Number of Questions</label>
           <input
             type="number"
+            title="Number of questions to generate"
             min={1}
-            max={20}
+            max={200}
             value={count}
             onChange={(e) => setCount(parseInt(e.target.value))}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
@@ -136,6 +151,7 @@ export default function AIQuestionGenerator() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
           <select
+            title="Select question type"
             value={questionType}
             onChange={(e) => setQuestionType(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
@@ -149,6 +165,7 @@ export default function AIQuestionGenerator() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">AI Provider</label>
           <select
+            title="Select AI provider"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
