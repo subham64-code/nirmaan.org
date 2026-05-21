@@ -1,6 +1,7 @@
 const express = require("express");
 const { ok, fail } = require("../utils/apiResponse");
 const { chat, generateQuestions, getProviderStatus } = require("../services/ai.service");
+const auth = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -33,7 +34,8 @@ router.post("/chat", async (req, res) => {
   }
 });
 
-router.post("/generate-questions", async (req, res) => {
+// Only teachers should be able to generate question banks via AI
+router.post("/generate-questions", auth(["teacher"]), async (req, res) => {
   const { topic, difficulty = "medium", count = 5, questionType = "mcq", provider = "ollama" } = req.body || {};
 
   if (!topic || !String(topic).trim()) {
