@@ -39,32 +39,14 @@ jobs:
           chmod 600 "$KEY_PATH"
         shell: bash
 
-      - name: "Copy compose to remote"
-        uses: appleboy/scp-action@v0.1.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          # Use key_path instead of passing raw key to avoid parsing issues
-          key_path: ${{ runner.temp }}/deploy_key
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT }}
-          source: 'deploy/docker-compose.remote.yml'
-          target: '~/nirmaan_deploy/docker-compose.remote.yml'
-
-      - name: "SSH: Pull images and run compose"
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          # Use the prepared key file path
-          key_path: ${{ runner.temp }}/deploy_key
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -e
-            mkdir -p ~/nirmaan_deploy
-            mv ~/nirmaan_deploy/docker-compose.remote.yml ~/nirmaan_deploy/docker-compose.remote.yml || true
-            cd ~/nirmaan_deploy
-            export GITHUB_OWNER='${{ secrets.GITHUB_OWNER }}'
-            docker compose -f docker-compose.remote.yml pull || true
-            docker compose -f docker-compose.remote.yml up -d
+      - name: Copy compose and run on remote via scp/ssh
+        run: |
+          set -euo pipefail
+          KEY_PATH="${{ runner.temp }}/deploy_key"
+          REMOTE="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          PORT="${{ secrets.SSH_PORT }}"
+          mkdir -p ~/nirmaan_deploy || true
+          # Ensure remote path exists and copy the file
+          scp -o StrictHostKeyChecking=no -P "${PORT}" -i "${KEY_PATH}" deploy/docker-compose.remote.yml "${REMOTE}:~/nirmaan_deploy/docker-compose.remote.yml"
+          ssh -o StrictHostKeyChecking=no -i "${KEY_PATH}" -p "${PORT}" "${REMOTE}" 'set -e; mkdir -p ~/nirmaan_deploy; cd ~/nirmaan_deploy; docker compose -f docker-compose.remote.yml pull || true; docker compose -f docker-compose.remote.yml up -d'
+        shell: bash
