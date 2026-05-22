@@ -12,7 +12,7 @@ jobs:
       contents: read
       packages: write
     env:
-      GITHUB_OWNER: ${{ secrets.GITHUB_OWNER }}
+      GHCR_OWNER: ${{ secrets.GHCR_OWNER }}
 
     steps:
       - name: Checkout
@@ -38,8 +38,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-backend:${{ github.sha }}
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-backend:latest
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-backend:${{ github.sha }}
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-backend:latest
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v4
@@ -48,8 +48,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-frontend:${{ github.sha }}
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-frontend:latest
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-frontend:${{ github.sha }}
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-frontend:latest
 
       - name: Build and push proctoring image
         uses: docker/build-push-action@v4
@@ -58,6 +58,6 @@ jobs:
           file: ./nirmaan_exam.org/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-proctoring:${{ github.sha }}
-            ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-proctoring:latest
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-proctoring:${{ github.sha }}
+            ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-proctoring:latest
 

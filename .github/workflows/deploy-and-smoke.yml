@@ -32,7 +32,7 @@ jobs:
           port: ${{ secrets.REMOTE_SSH_PORT }}
           script: |
             set -euo pipefail
-            export GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}
+            export GHCR_OWNER=${{ secrets.GHCR_OWNER }}
             # Save previous image tag (used for rollback)
             mkdir -p /home/${{ secrets.REMOTE_USER }}/deploy
             PREV_TAG=$(docker ps --filter name=nirmaan-backend --format '{{.Image}}' | awk -F: '{print $NF}' | head -n1 || echo 'latest') || true
@@ -92,7 +92,7 @@ jobs:
             fi
             echo "Rolling back to tag: $PREV_TAG"
             export IMAGE_TAG=$PREV_TAG
-            export GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}
+            export GHCR_OWNER=${{ secrets.GHCR_OWNER }}
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin || true
             IMAGE_TAG=$IMAGE_TAG docker compose -f /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml pull || true
             IMAGE_TAG=$IMAGE_TAG docker compose -f /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml up -d --remove-orphans
