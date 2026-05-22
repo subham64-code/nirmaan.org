@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    image: ghcr.io/${GITHUB_OWNER}/nirmaan-backend:latest
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+
+  frontend:
+    image: ghcr.io/${GITHUB_OWNER}/nirmaan-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  proctoring:
+    image: ghcr.io/${GITHUB_OWNER}/nirmaan-proctoring:latest
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb_data:
