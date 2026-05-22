@@ -19,8 +19,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # Allow fetching submodules; use provided token or fallback to GITHUB_TOKEN
+          token: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
           submodules: recursive
           fetch-depth: 0
+
+      - name: Debug: list workspace
+        run: |
+          echo "PWD: $(pwd)"
+          echo "Listing root:" 
+          ls -la
+          echo "Listing repo contents recursively (top 2 levels):"
+          find . -maxdepth 2 -type d -print || true
+          echo "Check nirmaan_exam.org exists:" 
+          test -d "nirmaan_exam.org" && echo "OK: nirmaan_exam.org present" || echo "MISSING: nirmaan_exam.org"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

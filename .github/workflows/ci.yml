@@ -18,6 +18,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Debug: list proctoring workspace
+        run: |
+          echo "PWD: $(pwd)"
+          ls -la
+          test -d "../nirmaan_exam.org" && echo "OK: ../nirmaan_exam.org present" || test -d "nirmaan_exam.org" && echo "OK: nirmaan_exam.org present" || echo "MISSING: nirmaan_exam.org"
+        with:
           submodules: recursive
           fetch-depth: 0
 
