@@ -2,8 +2,8 @@ name: Build and Push Docker images
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch: {}
+    branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -60,32 +60,4 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-proctoring:${{ github.sha }}
             ghcr.io/${{ secrets.GITHUB_OWNER }}/nirmaan-proctoring:latest
-name: Build and push (minimal test)
-
-on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch:
-
-jobs:
-  test-run:
-    runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Debug: list workspace
-        run: |
-          echo "PWD: $(pwd)"
-          echo "Listing root:" 
-          ls -la
-          echo "Find top-level dirs:"
-          find . -maxdepth 2 -type d -print || true
-          echo "Check nirmaan_exam.org exists:" 
-          test -d "nirmaan_exam.org" && echo "OK: nirmaan_exam.org present" || echo "MISSING: nirmaan_exam.org"
-
-      - name: Print node version
-        run: node --version || echo "node not found"
 
