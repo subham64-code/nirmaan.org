@@ -59,6 +59,13 @@ jobs:
             ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-frontend:${{ github.sha }}
             ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-frontend:latest
 
+      - name: Debug proctoring context
+        run: |
+          echo "Listing proctoring directory:"
+          ls -la ./nirmaan_exam.org || true
+          echo "\n--- Dockerfile head ---"
+          sed -n '1,120p' ./nirmaan_exam.org/Dockerfile || true
+
       - name: Build and push proctoring image
         uses: docker/build-push-action@v4
         with:
