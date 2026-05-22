@@ -1,0 +1,44 @@
+name: Deploy remote Docker Compose
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy compose to remote
+        uses: appleboy/scp-action@v0.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "deploy/docker-compose.remote.yml"
+          target: "~/nirmaan_deploy/docker-compose.remote.yml"
+
+      - name: SSH: Pull images and run compose
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            mkdir -p ~/nirmaan_deploy
+            mv ~/nirmaan_deploy/docker-compose.remote.yml ~/nirmaan_deploy/docker-compose.remote.yml || true
+            cd ~/nirmaan_deploy
+            export GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}
+            docker compose -f docker-compose.remote.yml pull || true
+            docker compose -f docker-compose.remote.yml up -d
