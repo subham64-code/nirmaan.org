@@ -23,20 +23,49 @@ jobs:
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_RSA: ${{ secrets.SSH_PRIVATE_KEY_RSA }}
         run: |
-          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "Missing SSH_HOST, SSH_USER, or SSH_PRIVATE_KEY secret"
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
+            echo "Missing SSH_HOST or SSH_USER secret"
+            exit 1
+          fi
+          if [ -z "${SSH_PRIVATE_KEY:-}" ] && [ -z "${SSH_PRIVATE_KEY_RSA:-}" ]; then
+            echo "Missing SSH_PRIVATE_KEY or SSH_PRIVATE_KEY_RSA secret"
             exit 1
           fi
 
-      - name: Prepare SSH key file
+      - name: Prepare SSH key file (sanitize LF/CRLF and choose RSA if available)
         run: |
-          set -e
+          set -euo pipefail
           KEY_PATH="${{ runner.temp }}/deploy_key"
           mkdir -p "$(dirname "$KEY_PATH")"
-          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_PATH"
+          # Prefer RSA private key if provided, else use generic key
+          if [ -n "${SSH_PRIVATE_KEY_RSA:-}" ]; then
+            KEY_CONTENT="$SSH_PRIVATE_KEY_RSA"
+          else
+            KEY_CONTENT="$SSH_PRIVATE_KEY"
+          fi
+          # Remove any CRLFs that may have been introduced when storing the secret
+          printf '%s\n' "$KEY_CONTENT" | sed 's/\r$//' > "$KEY_PATH"
           chmod 600 "$KEY_PATH"
+          echo "SSH key written to $KEY_PATH"
+          sha256sum "$KEY_PATH" || true
+        shell: bash
+
+      - name: SSH auth debug (verbose)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          KEY_PATH="${{ runner.temp }}/deploy_key"
+          PORT="${{ secrets.SSH_PORT }}"
+          REMOTE="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          echo "Attempting SSH auth to $REMOTE (port ${PORT:-22})"
+          # quick check (non-verbose)
+          ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i "$KEY_PATH" -p "${PORT:-22}" "$REMOTE" 'echo AUTH_OK' || true
+          # verbose output for debugging (may contain no sensitive key material)
+          ssh -vvv -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i "$KEY_PATH" -p "${PORT:-22}" "$REMOTE" 'echo AUTH_OK' 2>&1 | sed -n '1,200p' || true
         shell: bash
 
       - name: Copy compose and run on remote via scp/ssh
