@@ -1,0 +1,116 @@
+name: Deploy and Smoke Test
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker images"]
+    types: [completed]
+
+jobs:
+  deploy-and-test:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload compose to remote host
+        uses: appleboy/scp-action@v0.1.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: ${{ secrets.REMOTE_SSH_PORT }}
+          source: "deploy/docker-compose.remote.yml"
+          target: "/home/${{ secrets.REMOTE_USER }}/deploy/"
+
+      - name: Deploy on remote host (SSH)
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: ${{ secrets.REMOTE_SSH_PORT }}
+          script: |
+            set -euo pipefail
+            export GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}
+            # Save previous image tag (used for rollback)
+            mkdir -p /home/${{ secrets.REMOTE_USER }}/deploy
+            PREV_TAG=$(docker ps --filter name=nirmaan-backend --format '{{.Image}}' | awk -F: '{print $NF}' | head -n1 || echo 'latest') || true
+            echo "$PREV_TAG" > /home/${{ secrets.REMOTE_USER }}/deploy/prev_image_tag || true
+            echo "Previous image tag: $PREV_TAG"
+            # Set IMAGE_TAG to the workflow run commit SHA (passed from event)
+            export IMAGE_TAG=${{ github.event.workflow_run.head_sha }}
+            echo "Deploying IMAGE_TAG=$IMAGE_TAG"
+            echo "Logging into GHCR"
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin || true
+            mv /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml || true
+            cd /home/${{ secrets.REMOTE_USER }}/deploy
+            # Pull and deploy the new images
+            IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.remote.yml pull || true
+            IMAGE_TAG=$IMAGE_TAG docker compose -f docker-compose.remote.yml up -d --remove-orphans
+            docker ps --format "{{.Names}}\t{{.Status}}"
+
+      - name: Wait for services to start
+        run: sleep 10
+
+      - name: Run smoke tests against remote public URL
+        run: |
+          chmod +x ./scripts/smoke_test.sh
+          ./scripts/smoke_test.sh "${{ secrets.REMOTE_PUBLIC_URL }}"
+
+      - name: Comment PRs about successful deploy
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const headSha = context.payload.workflow_run.head_sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: headSha });
+            if (prs && prs.length) {
+              for (const pr of prs) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: `Deployment succeeded for commit ${headSha}.` });
+              }
+            } else {
+              core.info(`No PRs associated with commit ${headSha}`);
+            }
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: ${{ secrets.REMOTE_SSH_PORT }}
+          script: |
+            set -euo pipefail
+            PREV_TAG_FILE=/home/${{ secrets.REMOTE_USER }}/deploy/prev_image_tag
+            if [ -f "$PREV_TAG_FILE" ]; then
+              PREV_TAG=$(cat "$PREV_TAG_FILE")
+            else
+              PREV_TAG=latest
+            fi
+            echo "Rolling back to tag: $PREV_TAG"
+            export IMAGE_TAG=$PREV_TAG
+            export GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin || true
+            IMAGE_TAG=$IMAGE_TAG docker compose -f /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml pull || true
+            IMAGE_TAG=$IMAGE_TAG docker compose -f /home/${{ secrets.REMOTE_USER }}/deploy/docker-compose.remote.yml up -d --remove-orphans
+            docker ps --format "{{.Names}}\t{{.Status}}"
+
+      - name: Comment PRs about failed deploy and rollback
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const headSha = context.payload.workflow_run.head_sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner, repo, commit_sha: headSha });
+            if (prs && prs.length) {
+              for (const pr of prs) {
+                await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: `Deployment for commit ${headSha} failed smoke tests and was rolled back.` });
+              }
+            } else {
+              core.info(`No PRs associated with commit ${headSha}`);
+            }
