@@ -37,6 +37,9 @@ jobs:
           fi
 
       - name: Prepare SSH key file (sanitize LF/CRLF and choose RSA if available)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_RSA: ${{ secrets.SSH_PRIVATE_KEY_RSA }}
         run: |
           set -euo pipefail
           KEY_PATH="${{ runner.temp }}/deploy_key"
@@ -45,7 +48,11 @@ jobs:
           if [ -n "${SSH_PRIVATE_KEY_RSA:-}" ]; then
             KEY_CONTENT="$SSH_PRIVATE_KEY_RSA"
           else
-            KEY_CONTENT="$SSH_PRIVATE_KEY"
+            KEY_CONTENT="${SSH_PRIVATE_KEY:-}"
+          fi
+          if [ -z "$KEY_CONTENT" ]; then
+            echo "No SSH private key secret available"
+            exit 1
           fi
           # Remove any CRLFs that may have been introduced when storing the secret
           printf '%s\n' "$KEY_CONTENT" | sed 's/\r$//' > "$KEY_PATH"
