@@ -63,7 +63,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./nirmaan_exam.org
-          file: ./Dockerfile
+          file: ./nirmaan_exam.org/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ secrets.GHCR_OWNER }}/nirmaan-proctoring:${{ github.sha }}
