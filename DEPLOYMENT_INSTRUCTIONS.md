@@ -45,3 +45,5 @@ Troubleshooting:
 - If Actions fails to authenticate to GHCR, ensure the build workflow successfully logged in and your account has permission to push packages.
 - For SSH errors, verify `SSH_PRIVATE_KEY` matches the remote deploy user's `~/.ssh/authorized_keys` entry and `SSH_HOST`/`SSH_USER` are correct.
 \nCI trigger: 2026-05-22T10:02:29
+
+CI trigger: 2026-05-22T09:55:00
