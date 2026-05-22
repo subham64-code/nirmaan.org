@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
+import ToastProvider from "@/components/ToastProvider";
 import PageIntro from "@/components/PageIntro";
 import GsapEffects from "@/components/GsapEffects";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -39,20 +40,22 @@ export default function RootLayout({
       <body className="relative isolate min-h-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
         <SiteBackgroundVideo />
         <ThemeProvider>
-          <ErrorBoundary>
-            <div className="relative z-10 flex min-h-screen flex-1 flex-col">
-              <PageIntro />
-              <GsapEffects />
-              <Navbar />
-              <main className="flex-1">
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
-              </main>
-              <Footer />
-              <AIChatWidget />
-            </div>
-          </ErrorBoundary>
+          <ToastProvider>
+            <ErrorBoundary>
+              <div className="relative z-10 flex min-h-screen flex-1 flex-col">
+                <PageIntro />
+                <GsapEffects />
+                <Navbar />
+                <main className="flex-1">
+                  <ErrorBoundary>
+                    {children}
+                  </ErrorBoundary>
+                </main>
+                <Footer />
+                <AIChatWidget />
+              </div>
+            </ErrorBoundary>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

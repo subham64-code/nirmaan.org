@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { motion } from "framer-motion";
 import { Shield, Clock, Users, AlertCircle, CheckCircle, XCircle, ExternalLink, BookOpen, BarChart3, QrCode, MapPin, Brain } from "lucide-react";
 import EnhancedExamSystem from "@/components/EnhancedExamSystem";
@@ -8,6 +9,38 @@ import Link from "next/link";
 import { proctoringLaunchUrl } from "@/lib/constants";
 
 type UserRole = "student" | "teacher" | "admin" | null;
+
+function toBase64Url(value: string) {
+  return btoa(value).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+function buildDevToken(role: Exclude<UserRole, null>) {
+  const now = Math.floor(Date.now() / 1000);
+  const subjectMap = {
+    teacher: "60f000000000000000000001",
+    student: "60f000000000000000000002",
+    admin: "60f000000000000000000003",
+  } as const;
+  const payload = {
+    sub: subjectMap[role],
+    role,
+    name: role === "teacher" ? "Demo Teacher" : role === "admin" ? "Nirmaan Admin" : "Demo Student",
+    email: role === "teacher" ? "teacher@nirmaan.local" : role === "admin" ? "admin@nirmaan.local" : "student@nirmaan.local",
+    iat: now,
+    exp: now + 60 * 60,
+  };
+
+  return `${toBase64Url(JSON.stringify({ alg: "none", typ: "JWT" }))}.${toBase64Url(JSON.stringify(payload))}.`;
+}
+
+function ensureDevToken(role: Exclude<UserRole, null>) {
+  if (typeof window === "undefined") return;
+  const isLocalDev = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  if (!isLocalDev || localStorage.getItem("nirmaan_token")) return;
+  localStorage.setItem("nirmaan_token", buildDevToken(role));
+  localStorage.setItem("nirmaan_role", role);
+  localStorage.setItem("nirmaan_user_name", role === "teacher" ? "Demo Teacher" : role === "admin" ? "Nirmaan Admin" : "Demo Student");
+}
 
 const features = [
   { icon: <Shield className="w-6 h-6" />, title: "AI Proctoring", description: "Face detection, eye tracking & gaze analysis with real-time violation alerts", color: "from-blue-500 to-cyan-500" },
@@ -26,6 +59,7 @@ const violations = [
 ];
 
 export default function ExamPage() {
+  const showToast = useToast();
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [showExam, setShowExam] = useState(false);
 
@@ -33,6 +67,9 @@ export default function ExamPage() {
     if (typeof window !== "undefined") {
       const role = (localStorage.getItem("nirmaan_role") || null) as UserRole;
       setUserRole(role);
+      if (role && !localStorage.getItem("nirmaan_token")) {
+        ensureDevToken(role);
+      }
     }
   }, []);
 
@@ -76,28 +113,52 @@ export default function ExamPage() {
           <motion.div className="flex flex-wrap gap-4 mt-10" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             {!userRole ? (
               <>
-                <button onClick={() => { setUserRole("student"); setShowExam(true); }} className="flex items-center gap-2 bg-white text-indigo-700 font-semibold px-6 py-3 rounded-full hover:bg-indigo-50 transition shadow-lg">
+                <button onClick={() => { ensureDevToken("student"); setUserRole("student"); setShowExam(true); }} className="flex items-center gap-2 bg-white text-indigo-700 font-semibold px-6 py-3 rounded-full hover:bg-indigo-50 transition shadow-lg">
                   <BookOpen className="w-5 h-5" /> Coding Questions (Student)
                 </button>
-                <button onClick={() => { setUserRole("teacher"); setShowExam(true); }} className="flex items-center gap-2 bg-white/20 text-white font-semibold px-6 py-3 rounded-full border border-white/30 hover:bg-white/30 transition">
+                <button onClick={() => { ensureDevToken("teacher"); setUserRole("teacher"); setShowExam(true); }} className="flex items-center gap-2 bg-white/20 text-white font-semibold px-6 py-3 rounded-full border border-white/30 hover:bg-white/30 transition">
                   <BarChart3 className="w-5 h-5" /> Assessment & Quiz Exam (Teacher)
                 </button>
               </>
             ) : (
-              <button onClick={() => setShowExam(true)} className="flex items-center gap-2 bg-white text-indigo-700 font-semibold px-8 py-4 rounded-full hover:bg-indigo-50 transition shadow-lg text-lg">
+              <button onClick={() => { if (userRole) ensureDevToken(userRole); setShowExam(true); }} className="flex items-center gap-2 bg-white text-indigo-700 font-semibold px-8 py-4 rounded-full hover:bg-indigo-50 transition shadow-lg text-lg">
                 <BookOpen className="w-5 h-5" />
                 {userRole === "student" ? "Go to Coding Questions" : "Open Assessment Dashboard"}
               </button>
             )}
-            <a
-              href={proctoringLaunchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={async () => {
+                try {
+                  const launchWindow = window.open("about:blank", "_blank", "noopener");
+                  if (userRole) {
+                    ensureDevToken(userRole);
+                  }
+                  const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') + '/tests/proctoring/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' , ...(localStorage.getItem('nirmaan_token') ? { Authorization: `Bearer ${localStorage.getItem('nirmaan_token')}` } : {})},
+                    body: JSON.stringify({ role: userRole || localStorage.getItem('nirmaan_role') || 'student' }),
+                  });
+                  const data = await res.json();
+                  if (res.ok && data.data && data.data.url) {
+                    if (launchWindow) {
+                      launchWindow.location.href = data.data.url;
+                    } else {
+                      window.open(data.data.url, '_blank', 'noopener');
+                    }
+                  } else {
+                    console.error('Proctoring session creation failed', data);
+                    showToast('error', 'Failed to create proctoring session.');
+                  }
+                } catch (e) {
+                  console.error('Proctoring launch error', e);
+                  showToast('error', 'Failed to launch proctoring.');
+                }
+              }}
               className="flex items-center gap-2 bg-white/10 text-white font-semibold px-6 py-3 rounded-full border border-white/20 hover:bg-white/20 transition"
             >
               <Shield className="w-5 h-5" /> Advanced AI Proctoring
               <ExternalLink className="w-4 h-4" />
-            </a>
+            </button>
           </motion.div>
 
           {/* Warning for Flask */}

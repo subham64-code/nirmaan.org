@@ -292,6 +292,26 @@ router.get("/:id", auth(["student", "teacher", "admin"]), async (req, res) => {
   }
 });
 
+// GET /api/tests/:id/recipients - list students who would receive notifications for this test
+router.get('/:id/recipients', auth(['teacher','admin']), async (req, res) => {
+  try {
+    const Test = require('../models/Test');
+    const test = await Test.findById(req.params.id);
+    if (!test) return fail(res, 404, 'Test not found');
+
+    // Teachers can only view recipients for their own tests
+    if (req.user.role === 'teacher' && test.createdBy.toString() !== req.user.sub) {
+      return fail(res, 403, 'Unauthorized');
+    }
+
+    const recipients = await getTestRecipients(test);
+    return ok(res, recipients, 'Recipients retrieved');
+  } catch (error) {
+    console.error('Get recipients error:', error);
+    return fail(res, 500, 'Failed to retrieve recipients: ' + error.message);
+  }
+});
+
 // Clone/Duplicate test with new title
 router.post("/:id/clone", auth(["teacher", "admin"]), async (req, res) => {
   try {
@@ -1387,6 +1407,74 @@ router.get("/proctoring/flagged", auth(["teacher", "admin"]), async (req, res) =
   } catch (error) {
     console.error("Get flagged tests error:", error);
     return fail(res, 500, "Failed to retrieve flagged tests");
+  }
+});
+
+// Create a short-lived proctoring session URL (returns URL with signed token)
+router.post("/proctoring/session", async (req, res) => {
+  try {
+    const env = require("../config/env");
+    const jwt = require("jsonwebtoken");
+    const { testId } = req.body || {};
+
+    const header = req.headers.authorization || "";
+    const authToken = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+    let sessionUser = null;
+    if (authToken) {
+      try {
+        sessionUser = jwt.verify(authToken, env.jwtSecret);
+      } catch (error) {
+        if (env.nodeEnv === "production") {
+          return fail(res, 401, "Invalid token");
+        }
+      }
+    } else if (env.nodeEnv === "production") {
+      return fail(res, 401, "Unauthorized");
+    }
+
+    if (!sessionUser) {
+      sessionUser = {
+        sub: req.body?.sub || "guest-proctoring",
+        role: req.body?.role || "student",
+        name: req.body?.name || "Guest Learner",
+        email: req.body?.email || "guest@nirmaan.local",
+      };
+    }
+
+    // Build proctoring token payload. Include name/email so the Flask proctoring UI can display the real user.
+    const User = require('../models/User');
+    let userInfo = { name: null, email: null };
+    try {
+      const u = sessionUser?.sub && sessionUser.sub !== 'guest-proctoring'
+        ? await User.findById(sessionUser.sub).select('name email').lean()
+        : null;
+      if (u) userInfo = { name: u.name, email: u.email };
+    } catch (e) {
+      console.warn('Could not load user info for proctoring token:', e.message || e);
+    }
+
+    const payload = {
+      sub: sessionUser.sub,
+      role: sessionUser.role,
+      name: userInfo.name || sessionUser.name,
+      email: userInfo.email || sessionUser.email,
+      testId: testId || null,
+      proctoring: true,
+    };
+
+    // Short expiry for proctoring sessions
+    const token = jwt.sign(payload, env.jwtSecret, { expiresIn: '10m' });
+
+    // Proctoring service base URL (configured in env or default)
+    const proctorBase = process.env.PROCTORING_URL || process.env.NEXT_PUBLIC_PROCTORING_URL || (process.env.PROCTORING_HOST || 'http://127.0.0.1:5001');
+    const launchPath = '/proctoring-launch';
+    const url = `${proctorBase.replace(/\/$/, '')}${launchPath}?token=${encodeURIComponent(token)}` + (testId ? `&testId=${encodeURIComponent(testId)}` : '');
+
+    return ok(res, { url, expiresIn: 600 }, "Proctoring session created");
+  } catch (error) {
+    console.error("Create proctoring session error:", error);
+    return fail(res, 500, "Failed to create proctoring session");
   }
 });
 

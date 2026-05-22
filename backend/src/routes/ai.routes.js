@@ -47,7 +47,7 @@ router.post("/generate-questions", auth(["teacher"]), async (req, res) => {
       provider,
       topic: String(topic).trim(),
       difficulty,
-      count: Number(count) || 5,
+      count: Math.max(1, Math.min(Number(count) || 5, 200)),
       questionType,
     });
 

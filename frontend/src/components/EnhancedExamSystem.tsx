@@ -4,6 +4,7 @@ import "@/lib/screenfullShim";
 import { useState, useEffect } from "react";
 import { BookOpen, Users, Clock, Award, Play, BarChart3, Plus, Trash2, CheckCircle, AlertCircle, Sparkles, FileText } from "lucide-react";
 import { api, authHeader } from "@/lib/api";
+import { useToast } from "@/components/ToastProvider";
 import { fallbackPredefinedQuestions } from "@/lib/predefinedQuestions";
 
 interface Question {
@@ -69,6 +70,17 @@ interface GeneratedQuestion {
   type?: string;
 }
 
+const aiQuestionTopics = [
+  "JavaScript",
+  "Artificial Intelligence",
+  "Machine Learning",
+  "Deep Learning",
+  "Generative AI",
+  "MERN Stack",
+  "Python Data Analytics",
+  "Soft Skills",
+];
+
 export default function EnhancedExamSystem({ userRole }: { userRole: "student" | "teacher" | "admin" }) {
   const [tests, setTests] = useState<Test[]>([]);
   const [students, setStudents] = useState<User[]>([]);
@@ -121,6 +133,8 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     }
   }, [userRole]);
 
+  const showToast = useToast();
+
   const fetchTests = async () => {
     try {
       setLoading(true);
@@ -166,7 +180,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to download report");
+      showToast("error", error instanceof Error ? error.message : "Failed to download report");
     }
   };
 
@@ -190,8 +204,12 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       .replace(/```\s*$/i, "")
       .trim();
 
-    const parsed = JSON.parse(cleaned) as GeneratedQuestion[] | GeneratedQuestion;
-    return Array.isArray(parsed) ? parsed : [parsed];
+    try {
+      const parsed = JSON.parse(cleaned) as GeneratedQuestion[] | GeneratedQuestion;
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [];
+    }
   };
 
   const loadAiQuestionBank = async () => {
@@ -210,8 +228,11 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
         { headers: authHeader(localStorage.getItem("nirmaan_token") || "") }
       );
 
-      const rawText = response.data?.data?.text || "[]";
-      const generated = parseGeneratedQuestions(String(rawText));
+      const payload = response.data?.data || {};
+      const rawText = payload.text || JSON.stringify(payload.questions || []);
+      const generated = Array.isArray(payload.questions) && payload.questions.length > 0
+        ? payload.questions
+        : parseGeneratedQuestions(String(rawText));
       const mapped: QuestionBankItem[] = generated
         .filter((item) => item && item.question)
         .map((item, index) => {
@@ -281,13 +302,13 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
         totalMarks,
       });
       
-      alert("Exam created successfully!");
+      showToast("success", "Exam created successfully!");
       setShowCreateModal(false);
       setNewTest({ title: "", course: "AI/ML", targetAudience: "", audienceType: "all", audienceBatch: "", description: "", durationMinutes: 60, availableFrom: "", availableUntil: "", questions: [] });
       fetchTests();
     } catch (error: any) {
       console.error("Failed to create test:", error);
-      alert("Failed to create test: " + (error.response?.data?.message || error.message));
+      showToast("error", "Failed to create test: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -298,10 +319,10 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     try {
       await api.delete(`/tests/${testId}`);
       fetchTests();
-      alert("Exam deleted successfully.");
+      showToast("success", "Exam deleted successfully.");
     } catch (error) {
       console.error("Failed to delete test:", error);
-      alert("Failed to delete exam. Please try again.");
+      showToast("error", "Failed to delete exam. Please try again.");
     }
   };
 
@@ -311,10 +332,10 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setShowAssignModal(false);
       setSelectedStudentIds([]);
       fetchTests();
-      alert("Exam assigned successfully.");
+      showToast("success", "Exam assigned successfully.");
     } catch (error) {
       console.error("Failed to assign test:", error);
-      alert("Failed to assign exam. Please try again.");
+      showToast("error", "Failed to assign exam. Please try again.");
     }
   };
 
@@ -341,10 +362,10 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     try {
       await api.patch(`/tests/${testId}/publish`, { isPublished: true });
       fetchTests();
-      alert("Exam published successfully.");
+      showToast("success", "Exam published successfully.");
     } catch (error) {
       console.error("Failed to publish test:", error);
-      alert("Failed to publish exam. Please try again.");
+      showToast("error", "Failed to publish exam. Please try again.");
     }
   };
 
@@ -382,11 +403,16 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setExamLoadError(null);
 
       // Check if student can attempt this test (one attempt rule)
-      const canAttempt = await api.get(`/tests/${test._id}/can-attempt`);
-      if (!canAttempt.data.data.canAttempt) {
-        setExamLoadError(canAttempt.data.data.message || "You cannot attempt this exam right now.");
-        setLoading(false);
-        return;
+      try {
+        const canAttempt = await api.get(`/tests/${test._id}/can-attempt`);
+        if (canAttempt.data?.data?.canAttempt === false) {
+          setExamLoadError(canAttempt.data.data.message || "You cannot attempt this exam right now.");
+          setLoading(false);
+          return;
+        }
+      } catch (attemptError) {
+        console.warn("Attempt precheck failed, continuing with exam load:", attemptError);
+        showToast("warning", "Exam precheck failed, loading the exam directly.");
       }
 
       // Validate test has questions
@@ -1044,14 +1070,9 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                   <div>
                     <label className="block text-xs font-medium mb-1">Topic</label>
                     <select title="Select AI question topic" value={aiBankTopic} onChange={(e) => setAiBankTopic(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
-                      <option value="C Programming">C Programming</option>
-                      <option value="Java">Java</option>
-                      <option value="Python">Python</option>
-                      <option value="MERN Stack">MERN Stack</option>
-                      <option value="AI/ML">AI/ML</option>
-                      <option value="Deep Learning">Deep Learning</option>
-                      <option value="NLP">NLP</option>
-                      <option value="GenAI">GenAI</option>
+                      {aiQuestionTopics.map((topic) => (
+                        <option key={topic} value={topic}>{topic}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

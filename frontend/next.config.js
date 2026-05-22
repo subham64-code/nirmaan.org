@@ -60,8 +60,9 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: process.env.NODE_ENV === 'development' 
-              ? 'camera=(), microphone=(), autoplay=(), encrypted-media=()'
+            // Allow camera in development for local proctoring; keep restrictive in production
+            value: process.env.NODE_ENV === 'development'
+              ? 'camera=(self "http://127.0.0.1:3000" "http://localhost:3000"), microphone=(), autoplay=(), encrypted-media=()'
               : 'camera=(), microphone=(), geolocation=(), autoplay=(), encrypted-media=()',
           },
         ],

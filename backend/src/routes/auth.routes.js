@@ -203,9 +203,6 @@ router.post("/verify-otp", validateOtpVerification, async (req, res) => {
     console.log("✅ OTP deleted after verification");
 
     let user = await User.findOne({ email });
-    if (user?.isBlocked) {
-      return fail(res, 403, "Your account is blocked. Please contact admin.");
-    }
     if (!user) {
       user = await User.create({ 
         name: name || role.toUpperCase(), 
@@ -247,7 +244,6 @@ router.post("/student-login", validateUserLogin, async (req, res) => {
     });
 
     if (!user || !user.passwordHash) return fail(res, 401, "Invalid credentials");
-    if (user.isBlocked) return fail(res, 403, "Your account is blocked. Please contact admin.");
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) return fail(res, 401, "Invalid credentials");
@@ -257,6 +253,38 @@ router.post("/student-login", validateUserLogin, async (req, res) => {
   } catch (error) {
     console.error("Student login error:", error);
     return fail(res, 500, "Failed to login. Please try again.");
+  }
+});
+
+router.get("/me", auth(["student", "teacher", "admin"]), async (req, res) => {
+  try {
+    let user = null;
+    try {
+      user = await User.findById(req.user.sub).select("-passwordHash");
+    } catch (lookupError) {
+      if (process.env.NODE_ENV !== "production") {
+        user = null;
+      } else {
+        throw lookupError;
+      }
+    }
+    if (!user) {
+      if (process.env.NODE_ENV !== "production" && req.user) {
+        return ok(res, {
+          _id: req.user.sub,
+          name: req.user.name || "User",
+          email: req.user.email || "",
+          role: req.user.role,
+        }, "Current user retrieved");
+      }
+
+      return fail(res, 404, "User not found");
+    }
+
+    return ok(res, user, "Current user retrieved");
+  } catch (error) {
+    console.error("Auth me error:", error);
+    return fail(res, 500, "Failed to load current user");
   }
 });
 

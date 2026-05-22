@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post("/mark", auth(["teacher", "admin"]), async (req, res) => {
   const { studentId, date, status } = req.body;
-  if (!studentId || !date || !["Present", "Absent"].includes(status)) {
+  if (!studentId || !date || !["Present", "Absent", "Late"].includes(status)) {
     return fail(res, 400, "studentId, date, and valid status are required");
   }
 
@@ -246,14 +246,10 @@ router.get("/report", auth(["teacher", "admin"]), async (req, res) => {
     if (centerId) query.centerId = centerId;
     if (status) query.status = status;
 
-    // Teachers can only see their own center's records
-    if (userRole === "teacher") {
-      query.teacherId = req.user.sub;
-    }
-
     const records = await AttendanceCheckIn.find(query)
       .populate("userId", "name email nirmaanId")
       .sort({ checkInAt: -1 });
+
 
     return ok(res, records, "Attendance report retrieved");
   } catch (error) {

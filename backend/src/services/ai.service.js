@@ -219,6 +219,52 @@ function buildFallbackQuestions({ topic, difficulty, count, questionType }) {
   return JSON.stringify(items, null, 2);
 }
 
+function normalizeQuestionItem(item, index = 0) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const question = String(item.question || item.prompt || '').trim();
+  if (!question) {
+    return null;
+  }
+
+  const options = Array.isArray(item.options) ? item.options.map((option) => String(option)) : [];
+  const rawAnswer = item.correctAnswer ?? item.answer ?? item.correct ?? item.correct_option;
+  const correctAnswer = typeof rawAnswer === 'number'
+    ? rawAnswer
+    : ['A', 'B', 'C', 'D'].indexOf(String(rawAnswer || 'A').trim().toUpperCase());
+
+  return {
+    id: index + 1,
+    question,
+    options: options.length ? options : ['Option A', 'Option B', 'Option C', 'Option D'],
+    correctAnswer: correctAnswer >= 0 ? correctAnswer : 0,
+    explanation: String(item.explanation || ''),
+    type: String(item.type || 'mcq'),
+  };
+}
+
+function parseQuestionPayload(rawText) {
+  if (!rawText) {
+    return [];
+  }
+
+  const cleaned = String(rawText)
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    const list = Array.isArray(parsed) ? parsed : [parsed];
+    return list.map((item, index) => normalizeQuestionItem(item, index)).filter(Boolean);
+  } catch (error) {
+    return [];
+  }
+}
+
 async function loadGoogleModel() {
   if (!env.geminiApiKey) {
     throw new Error("Gemini API key not configured");
@@ -389,13 +435,26 @@ async function generateQuestions({ provider = "ollama", topic, difficulty = "med
   const response = await chat({ provider, message: prompt });
 
   if (response.provider === "server-fallback") {
+    const questions = parseQuestionPayload(buildFallbackQuestions({ topic, difficulty, count, questionType }));
     return {
       provider: response.provider,
       text: buildFallbackQuestions({ topic, difficulty, count, questionType }),
+      questions,
     };
   }
 
-  return { provider: response.provider, text: response.text };
+  const parsedQuestions = parseQuestionPayload(response.text);
+
+  if (!parsedQuestions.length) {
+    const fallbackText = buildFallbackQuestions({ topic, difficulty, count, questionType });
+    return {
+      provider: `${response.provider}-fallback`,
+      text: fallbackText,
+      questions: parseQuestionPayload(fallbackText),
+    };
+  }
+
+  return { provider: response.provider, text: response.text, questions: parsedQuestions };
 }
 
 async function getProviderStatus() {

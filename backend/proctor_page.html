@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard - Nirmaan's Exam System</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link type="text/css" rel="stylesheet" href="/static/css/pixel.css">
+  <link type="text/css" rel="stylesheet" href="/static/css/nirmaan-custom.css">
+  <style>
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(11, 92, 171, 0.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 42, 67, 0.08), transparent 24%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      min-height: 100vh;
+    }
+    .navbar-brand { font-weight: 700; }
+    .card { border: 0; box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+    footer { background: #0f2a43; color: #fff; margin-top: 3rem; }
+    .notification-badge { background: #dc3545; color: #fff; border-radius: 999px; padding: 0.15rem 0.45rem; font-size: .75rem; margin-left: .25rem; }
+    .app-navbar-gradient {
+      background: linear-gradient(135deg, #0f2a43 0%, #124c7f 48%, #0b5cab 100%);
+      box-shadow: 0 10px 30px rgba(15, 42, 67, .18);
+    }
+    .app-hero-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+    }
+    .app-hero-card::after {
+      content: '';
+      position: absolute;
+      inset: auto -20% -30% auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.08);
+      filter: blur(4px);
+      animation: floatGlow 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes floatGlow {
+      0%, 100% { transform: translateY(0px); opacity: .65; }
+      50% { transform: translateY(-16px); opacity: .9; }
+    }
+  </style>
+  
+<style>
+  :root {
+    --primary: #0f2a43;
+    --secondary: #0b5cab;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --dark: #1a1a1a;
+    --light-bg: #f8f9fa;
+  }
+
+  body {
+    background: linear-gradient(135deg, var(--light-bg), #ffffff);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  .dashboard-container {
+    padding: 2rem 0;
+  }
+
+  /* Header Section */
+  .dashboard-header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 2.5rem 2rem;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 8px 32px rgba(15, 42, 67, 0.15);
+    margin-bottom: 2rem;
+  }
+
+  .dashboard-header h1 {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .dashboard-header p {
+    margin-bottom: 0;
+    opacity: 0.95;
+  }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 2px solid white;
+  }
+
+  /* Stats Section */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid var(--secondary);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .stat-card h6 {
+    color: #666;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  /* Exam Cards */
+  .exam-cards-section h3 {
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+
+  .exam-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s;
+    margin-bottom: 1.5rem;
+  }
+
+  .exam-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .exam-card-header {
+    background: linear-gradient(135deg, var(--secondary), #0a4a95);
+    color: white;
+    padding: 1.5rem;
+  }
+
+  .exam-card-header h4 {
+    margin-bottom: 0.5rem;
+  }
+
+  .exam-meta {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .exam-card-body {
+    padding: 1.5rem;
+  }
+
+  .exam-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .detail-item i {
+    color: var(--secondary);
+    font-size: 1.2rem;
+  }
+
+  .detail-item span {
+    font-size: 0.95rem;
+  }
+
+  .exam-status {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .status-available {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .status-submitted {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
+
+  .status-completed {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  /* Action Buttons */
+  .exam-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn-take-exam {
+    flex: 1;
+    background: linear-gradient(135deg, var(--secondary), #0a4a95);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-take-exam:hover {
+    background: linear-gradient(135deg, #0a4a95, #083878);
+    box-shadow: 0 8px 16px rgba(11, 92, 171, 0.3);
+    color: white;
+    text-decoration: none;
+  }
+
+  .btn-view-result {
+    flex: 1;
+    background: #f8f9fa;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-view-result:hover {
+    background: var(--primary);
+    color: white;
+  }
+
+  /* Tabs */
+  .nav-tabs {
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 2rem;
+  }
+
+  .nav-link {
+    color: #666;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .nav-link.active {
+    background: none;
+    color: var(--secondary);
+    border-bottom-color: var(--secondary);
+  }
+
+  .nav-link:hover {
+    color: var(--secondary);
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #999;
+  }
+
+  .empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .empty-state h5 {
+    color: #666;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .dashboard-header {
+      border-radius: 0;
+    }
+
+    .exam-details {
+      grid-template-columns: 1fr;
+    }
+
+    .exam-actions {
+      flex-direction: column;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark app-navbar-gradient">
+    <div class="container">
+      <a class="navbar-brand" href="/">Nirmaan's Exam System</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExample" aria-label="Toggle navigation" title="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+        <span class="sr-only">Toggle navigation</span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarsExample">
+        
+        <div class="navbar-nav ml-auto">
+          <a class="nav-item nav-link" href="/student/dashboard">Dashboard</a>
+          <a class="nav-item nav-link" href="/student/results">My Results</a>
+          <a class="nav-item nav-link" href="/notifications">Notifications<span class="notification-badge">114</span></a>
+          <a class="nav-item nav-link" href="/logout">Logout</a>
+          <a class="nav-item nav-link" href="/faq">FAQ</a>
+          <a class="nav-item nav-link" href="/contact">Contact Us</a>
+        </div>
+        
+      </div>
+    </div>
+  </nav>
+
+  <main class="py-4">
+    <div class="container">
+      
+        
+      
+      
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="container">
+      <h1>📚 Student Dashboard</h1>
+      <p>Welcome to Nirmaan's Exam System</p>
+      <div class="user-info">
+        <div class="user-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div>
+          <p style="margin-bottom: 0;">
+            <strong>Demo Student</strong><br>
+            <small>demo.student@nirmaan.local</small>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h6>📋 Available Exams</h6>
+        <div class="stat-value">2</div>
+      </div>
+      <div class="stat-card">
+        <h6>✅ Completed Exams</h6>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <h6>⏱️ Pending Exams</h6>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <h6>⭐ Average Score</h6>
+        <div class="stat-value">--%</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" data-toggle="tab" href="#available">Available Exams</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#pending">In Progress</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#completed">Completed</a>
+      </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Available Exams -->
+      <div id="available" class="tab-pane fade show active">
+        <div class="exam-cards-section">
+          
+            
+            <div class="exam-card">
+              <div class="exam-card-header">
+                <h4>English - Essay</h4>
+                <div class="exam-meta">
+                  <span>📅 </span>
+                  <span>⏱️ 60 mins</span>
+                  <span>⭐  marks</span>
+                </div>
+              </div>
+              <div class="exam-card-body">
+                <div class="exam-details">
+                  <div class="detail-item">
+                    <i class="fas fa-layer-group"></i>
+                    <span>0 Questions</span>
+                  </div>
+                  <div class="detail-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Type: Subjective</span>
+                  </div>
+                </div>
+                <p class="text-muted" style="font-size: 0.9rem;"></p>
+                <span class="exam-status status-available">🟢 Available</span>
+                <div class="exam-actions">
+                  <a href="/student/take-exam/T_LQA_DEMO" class="btn-take-exam">
+                    <i class="fas fa-play"></i> Start Exam
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <div class="exam-card">
+              <div class="exam-card-header">
+                <h4>CS - Coding</h4>
+                <div class="exam-meta">
+                  <span>📅 </span>
+                  <span>⏱️ 90 mins</span>
+                  <span>⭐  marks</span>
+                </div>
+              </div>
+              <div class="exam-card-body">
+                <div class="exam-details">
+                  <div class="detail-item">
+                    <i class="fas fa-layer-group"></i>
+                    <span>0 Questions</span>
+                  </div>
+                  <div class="detail-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Type: Practical</span>
+                  </div>
+                </div>
+                <p class="text-muted" style="font-size: 0.9rem;"></p>
+                <span class="exam-status status-available">🟢 Available</span>
+                <div class="exam-actions">
+                  <a href="/student/take-exam/T_PQA_DEMO" class="btn-take-exam">
+                    <i class="fas fa-play"></i> Start Exam
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+          
+        </div>
+      </div>
+
+      <!-- Pending Exams -->
+      <div id="pending" class="tab-pane fade">
+        <div class="exam-cards-section">
+          
+            <div class="empty-state">
+              <i class="fas fa-inbox"></i>
+              <h5>No Exams in Progress</h5>
+              <p>Start an exam to see it here</p>
+            </div>
+          
+        </div>
+      </div>
+
+      <!-- Completed Exams -->
+      <div id="completed" class="tab-pane fade">
+        <div class="exam-cards-section">
+          
+            <div class="empty-state">
+              <i class="fas fa-inbox"></i>
+              <h5>No Completed Exams Yet</h5>
+              <p>Complete an exam to see your results here</p>
+            </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    </div>
+  </main>
+
+  <footer class="py-4">
+    <div class="container text-center">
+      <div>Nirmaan's Exam System</div>
+      <small>&copy; <script>document.write(new Date().getFullYear())</script></small>
+    </div>
+  </footer>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src="/static/assets/js/pixel.js"></script>
+  <script src="/static/vendor/prismjs/prism.js"></script>
+  
+</body>
+</html>

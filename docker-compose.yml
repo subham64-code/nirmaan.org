@@ -19,6 +19,7 @@ services:
       - "5000:5000"
     depends_on:
       - mongodb
+      - proctoring
 
   frontend:
     build:
@@ -31,6 +32,18 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+
+  proctoring:
+    build:
+      context: ./nirmaan_exam.org
+    container_name: nirmaan-proctoring
+    restart: unless-stopped
+    env_file:
+      - ./nirmaan_exam.org/.env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
 
 volumes:
   mongodb_data:

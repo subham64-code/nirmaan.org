@@ -46,15 +46,61 @@ export default function TeacherProfileCard({ teacherName, compact = false }: Tea
       setIsLoading(true);
       setError(null);
       
-      const response = await api.get(`/faculty/name/${encodeURIComponent(teacherName)}`);
-      
-      if (response.data.success) {
-        const facultyData = response.data.data;
-        setFaculty(facultyData);
-        
+      let profileData: Faculty | null = null;
+      const isDemoTeacher = /demo teacher/i.test(String(teacherName || ""));
+
+      if (isDemoTeacher) {
+        try {
+          const authResponse = await api.get("/auth/me", {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          });
+          const authData = authResponse.data?.data || {};
+          profileData = {
+            _id: authData._id || "",
+            name: authData.name || teacherName,
+            email: authData.email || "",
+            designation: authData.role === "admin" ? "Administrator" : "Teacher",
+            joinDate: new Date().toISOString(),
+            isActive: true,
+            photo: authData.picture || localStorage.getItem("nirmaan_user_picture") || undefined,
+          } as Faculty;
+        } catch {
+          profileData = null;
+        }
+      } else {
+        try {
+          const response = await api.get(`/faculty/name/${encodeURIComponent(teacherName)}`);
+          if (response.data.success) {
+            profileData = response.data.data;
+          }
+        } catch {
+          // Fall back to the authenticated profile for demo / local sessions.
+          try {
+            const authResponse = await api.get("/auth/me", {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            const authData = authResponse.data?.data || {};
+            profileData = {
+              _id: authData._id || "",
+              name: authData.name || teacherName,
+              email: authData.email || "",
+              designation: authData.role === "admin" ? "Administrator" : "Teacher",
+              joinDate: new Date().toISOString(),
+              isActive: true,
+              photo: authData.picture || localStorage.getItem("nirmaan_user_picture") || undefined,
+            } as Faculty;
+          } catch {
+            profileData = null;
+          }
+        }
+      }
+
+      if (profileData) {
+        setFaculty(profileData);
+
         // Use faculty photo if available, otherwise use stored user picture
-        if (facultyData.photo) {
-          setUserPicture(facultyData.photo);
+        if (profileData.photo) {
+          setUserPicture(profileData.photo);
         }
       } else {
         setError("Teacher profile not found");

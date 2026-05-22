@@ -87,7 +87,6 @@ export default function FacultyIntroVideos() {
           <div
             key={faculty.id}
             className="glass p-6 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer group"
-            style={{ animationDelay: `${index * 0.1}s` }}
             onClick={() => setSelectedFaculty(faculty)}
           >
             {/* Faculty Image with Play Button */}

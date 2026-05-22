@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, TrendingUp, MapPin } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 import { api } from "@/lib/api";
 
 interface AttendanceRecord {
@@ -27,13 +28,28 @@ export default function AttendanceWidget() {
   const [checkingIn, setCheckingIn] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const showToast = useToast();
 
   useEffect(() => {
-    fetchAttendance();
+    if (typeof window !== "undefined") {
+      const role = localStorage.getItem("nirmaan_role");
+      setUserRole(role);
+      fetchAttendance(role);
+      return;
+    }
   }, [selectedMonth, selectedYear]);
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = async (roleOverride?: string | null) => {
     try {
+      const role = roleOverride ?? (typeof window !== "undefined" ? localStorage.getItem("nirmaan_role") : userRole);
+
+      if (role && role !== "student") {
+        setRecords([]);
+        setStats(null);
+        return;
+      }
+
       setLoading(true);
       const response = await api.get(`/attendance/my-attendance?month=${selectedMonth}&year=${selectedYear}`);
       setRecords(response.data.data.records);
@@ -47,16 +63,21 @@ export default function AttendanceWidget() {
 
   const handleCheckIn = async () => {
     try {
+      if (userRole && userRole !== "student") {
+        showToast("info", "Attendance check-in is available in the student portal.");
+        return;
+      }
+
       setCheckingIn(true);
       await api.post("/attendance/self-checkin", {
         status: "Present",
         note: "Checked in via dashboard",
       });
       await fetchAttendance();
-      alert("Attendance recorded successfully!");
+      showToast("success", "Attendance recorded successfully!");
     } catch (error) {
       console.error("Check-in failed:", error);
-      alert("Failed to record attendance. Please try again.");
+      showToast("error", "Failed to record attendance. Please try again.");
     } finally {
       setCheckingIn(false);
     }
@@ -105,7 +126,12 @@ export default function AttendanceWidget() {
         </div>
 
         {/* Check-in Button */}
-        {!todayRecord ? (
+        {userRole && userRole !== "student" ? (
+          <div className="px-4 py-2 rounded-lg border flex items-center gap-2 bg-gray-100 text-gray-700 border-gray-200">
+            <Calendar className="h-4 w-4" />
+            <span className="font-medium">Teacher dashboard attendance summary</span>
+          </div>
+        ) : !todayRecord ? (
           <button
             onClick={handleCheckIn}
             disabled={checkingIn}

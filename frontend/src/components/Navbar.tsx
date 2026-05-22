@@ -69,7 +69,8 @@ export default function Navbar() {
 
   const fetchUserProfile = async (authToken: string) => {
     try {
-      const response = await api.get("/students/me", { 
+      const profileRoute = userRole === "student" ? "/students/me" : "/auth/me";
+      const response = await api.get(profileRoute, { 
         headers: authHeader(authToken) 
       });
       

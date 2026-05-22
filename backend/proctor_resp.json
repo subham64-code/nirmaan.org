@@ -1,0 +1,1 @@
+{"success":true,"message":"Proctoring session created","data":{"url":"http://127.0.0.1:5001/proctoring-launch?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLCJyb2xlIjoic3R1ZGVudCIsInRlc3RJZCI6bnVsbCwicHJvY3RvcmluZyI6dHJ1ZSwiaWF0IjoxNzc5MzY2NjkzLCJleHAiOjE3NzkzNjcyOTN9.wb5lzcFWYy9X6JQ4FE9PDbVihkaS9cOL51StKrebA0A","expiresIn":600}}

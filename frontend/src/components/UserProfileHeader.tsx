@@ -41,7 +41,8 @@ export default function UserProfileHeader({ userName, userRole, refreshTrigger }
     try {
       if (!token) return;
       
-      const response = await api.get("/students/me", { 
+      const profileRoute = userRole === "student" ? "/students/me" : "/auth/me";
+      const response = await api.get(profileRoute, { 
         headers: authHeader(token) 
       });
       

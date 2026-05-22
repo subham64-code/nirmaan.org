@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Loader2, BookOpen, Settings, CheckCircle, Download, Copy } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ToastProvider";
 
 interface Question {
   question: string;
@@ -10,6 +11,19 @@ interface Question {
   correctAnswer: number;
   explanation: string;
 }
+
+type TopicOption = { value: string; label: string };
+
+const topicOptions: TopicOption[] = [
+  { value: "JavaScript", label: "JavaScript" },
+  { value: "Artificial Intelligence", label: "Artificial Intelligence (AI)" },
+  { value: "Machine Learning", label: "Machine Learning (ML)" },
+  { value: "Deep Learning", label: "Deep Learning (DL)" },
+  { value: "Generative AI", label: "Generative AI (GenAI)" },
+  { value: "MERN Stack", label: "MERN Stack" },
+  { value: "Python Data Analytics", label: "Python for Data Analytics" },
+  { value: "Soft Skills", label: "Soft Skills" },
+];
 
 export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole?: "teacher" | "admin" | "student" }) {
   if (userRole !== "teacher") {
@@ -24,6 +38,24 @@ export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [error, setError] = useState("");
+  const showToast = useToast();
+
+  const parseGeneratedQuestions = (rawText: string) => {
+    const cleaned = String(rawText || "")
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+
+    if (!cleaned) return [];
+
+    try {
+      const parsed = JSON.parse(cleaned);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [];
+    }
+  };
 
   const generateQuestions = async () => {
     if (!topic.trim()) {
@@ -43,11 +75,32 @@ export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole
       });
 
       if (response.data.success) {
-        setQuestions(response.data.data.questions || []);
+        const payload = response.data.data || {};
+        const rawQuestions = Array.isArray(payload.questions) && payload.questions.length > 0
+          ? payload.questions
+          : parseGeneratedQuestions(String(payload.text || ""));
+
+        const normalized = (Array.isArray(rawQuestions) ? rawQuestions : [rawQuestions]).map((item: any) => ({
+          question: String(item.question || item.prompt || "").trim(),
+          options: Array.isArray(item.options) ? item.options.slice(0, 4).map(String) : ["A", "B", "C", "D"],
+          correctAnswer: typeof item.correctAnswer === "number"
+            ? item.correctAnswer
+            : Math.max(0, ["A", "B", "C", "D"].indexOf(String(item.correctAnswer || item.answer || "A").toUpperCase())),
+          explanation: String(item.explanation || ""),
+        })).filter((item: Question) => item.question);
+
+        if (normalized.length === 0) {
+          setError("The AI response did not contain usable questions. Please try a different topic or provider.");
+          showToast("error", "The AI response did not contain usable questions.");
+          return;
+        }
+
+        setQuestions(normalized);
       }
     } catch (err) {
       console.error("Failed to generate questions:", err);
       setError("Failed to generate questions. Please try again.");
+      showToast("error", "Failed to generate questions. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -60,7 +113,7 @@ export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole
       })
       .join("\n\n");
     navigator.clipboard.writeText(text);
-    alert("Questions copied to clipboard!");
+    showToast("success", "Questions copied to clipboard!");
   };
 
   const downloadQuestions = () => {
@@ -107,14 +160,9 @@ export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
             <option value="">Select a topic</option>
-            <option value="C Programming">C Programming</option>
-            <option value="Java">Java</option>
-            <option value="Python">Python</option>
-            <option value="MERN Stack">MERN Stack</option>
-            <option value="AI/ML">AI/ML</option>
-            <option value="Deep Learning">Deep Learning</option>
-            <option value="NLP">NLP</option>
-            <option value="GenAI">GenAI</option>
+            {topicOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 

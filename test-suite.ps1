@@ -2,7 +2,7 @@ $Passed = 0
 $Failed = 0
 
 $baseUrl = "http://localhost:5000"
-$webUrl = "http://localhost:3000"
+$webUrl = if ($env:FRONTEND_URL -and $env:FRONTEND_URL -ne "") { $env:FRONTEND_URL } elseif ($env:NEXT_PUBLIC_FRONTEND_URL -and $env:NEXT_PUBLIC_FRONTEND_URL -ne "") { $env:NEXT_PUBLIC_FRONTEND_URL } else { "http://localhost:3000" }
 
 try {
     $health = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/health" -UseBasicParsing -TimeoutSec 10

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/DashboardShell";
 import NotificationSystem from "@/components/NotificationSystem";
+import { useToast } from "@/components/ToastProvider";
 import { api, authHeader } from "@/lib/api";
 import { AlertTriangle, Download, ShieldAlert, Users } from "lucide-react";
 
@@ -32,6 +33,7 @@ export default function AdminExamReviewsPage() {
   const [selectedTestId, setSelectedTestId] = useState<string>("");
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const showToast = useToast();
 
   const token = typeof window !== "undefined" ? localStorage.getItem("nirmaan_token") || "" : "";
 
@@ -114,13 +116,13 @@ export default function AdminExamReviewsPage() {
               ))}
             </select>
             <button
-              onClick={() => downloadReport("pdf").catch((error: unknown) => alert(error instanceof Error ? error.message : "Failed to download PDF report"))}
+              onClick={() => downloadReport("pdf").catch((error: unknown) => showToast("error", error instanceof Error ? error.message : "Failed to download PDF report"))}
               className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand)] px-4 py-2 font-semibold text-white"
             >
               <Download className="h-4 w-4" /> PDF
             </button>
             <button
-              onClick={() => downloadReport("doc").catch((error: unknown) => alert(error instanceof Error ? error.message : "Failed to download DOC report"))}
+              onClick={() => downloadReport("doc").catch((error: unknown) => showToast("error", error instanceof Error ? error.message : "Failed to download DOC report"))}
               className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 font-semibold text-white"
             >
               <Download className="h-4 w-4" /> DOC

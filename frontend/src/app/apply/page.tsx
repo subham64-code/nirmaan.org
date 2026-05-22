@@ -171,7 +171,13 @@ export default function ApplyPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Date</label>
-              <input type="date" className="w-full rounded-xl border border-[var(--outline)] p-3" defaultValue={new Date().toISOString().split('T')[0]} />
+              <input
+                type="date"
+                className="w-full rounded-xl border border-[var(--outline)] p-3"
+                defaultValue={new Date().toISOString().split('T')[0]}
+                aria-label="Application date"
+                title="Application date"
+              />
             </div>
           </div>
 
@@ -349,12 +355,54 @@ export default function ApplyPage() {
                     <tbody>
                       {[...Array(workExperienceCount + 1)].map((_, index) => (
                         <tr key={index} className="border-b">
-                          <td className="p-2"><input className="w-full border p-2 rounded" placeholder="Organization" /></td>
-                          <td className="p-2"><input type="date" className="w-full border p-2 rounded" /></td>
-                          <td className="p-2"><input type="date" className="w-full border p-2 rounded" /></td>
-                          <td className="p-2"><input className="w-full border p-2 rounded" placeholder="Designation" /></td>
-                          <td className="p-2"><input className="w-full border p-2 rounded" placeholder="Salary" /></td>
-                          <td className="p-2"><input className="w-full border p-2 rounded" placeholder="Reason" /></td>
+                          <td className="p-2">
+                            <input
+                              className="w-full border p-2 rounded"
+                              placeholder="Organization"
+                              aria-label={`work-organization-${index}`}
+                              title="Organization"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="date"
+                              className="w-full border p-2 rounded"
+                              aria-label={`work-from-${index}`}
+                              title="From date"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="date"
+                              className="w-full border p-2 rounded"
+                              aria-label={`work-to-${index}`}
+                              title="To date"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              className="w-full border p-2 rounded"
+                              placeholder="Designation"
+                              aria-label={`work-designation-${index}`}
+                              title="Designation"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              className="w-full border p-2 rounded"
+                              placeholder="Salary"
+                              aria-label={`work-salary-${index}`}
+                              title="Salary"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              className="w-full border p-2 rounded"
+                              placeholder="Reason"
+                              aria-label={`work-reason-${index}`}
+                              title="Reason for leaving"
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>

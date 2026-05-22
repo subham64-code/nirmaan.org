@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, Download, Clock, Users, Award, Target, CheckCircle, Play, FileText } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 import { courses } from "@/lib/constants";
 
 export default function SyllabusPage() {
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "modules" | "outcomes" | "documents">("overview");
   const [downloadStatus, setDownloadStatus] = useState<Record<string, boolean>>({});
+  const showToast = useToast();
 
   const selectedCourseData = courses.find(course => course.title === selectedCourse);
 
@@ -39,7 +41,6 @@ export default function SyllabusPage() {
               className={`glass p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-xl ${
                 selectedCourse === course.title ? 'ring-2 ring-blue-500' : ''
               }`}
-              style={{ animationDelay: `${index * 0.1}s` }}
               onClick={() => setSelectedCourse(course.title)}
             >
               <div className="flex items-center justify-between mb-4">
@@ -395,7 +396,7 @@ export default function SyllabusPage() {
     ];
     
     if (!validFiles.includes(filename)) {
-      alert("❌ Invalid document selected");
+      showToast("error", "❌ Invalid document selected");
       return;
     }
 
@@ -422,7 +423,7 @@ export default function SyllabusPage() {
       }, 3000);
     } catch (error) {
       console.error("Download error:", error);
-      alert("❌ Failed to download document. Please try again.");
+      showToast("error", "❌ Failed to download document. Please try again.");
     }
   }
 

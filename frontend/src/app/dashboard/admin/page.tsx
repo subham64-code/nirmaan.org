@@ -8,6 +8,7 @@ import { AnimatedCard } from "@/components/AnimatedCard";
 import { motion } from "framer-motion";
 import { Users, Clock, Award, TestTube, CheckCircle, AlertCircle, BarChart3, FileText, Shield } from "lucide-react";
 import NotificationSystem from "@/components/NotificationSystem";
+import { useToast } from "@/components/ToastProvider";
 import GPSBasedAttendance from "@/components/GPSBasedAttendance";
 import AttendanceAnalyticsChart from "@/components/AttendanceAnalyticsChart";
 import { dailyAttendanceReportUrl } from "@/lib/constants";
@@ -24,6 +25,7 @@ type DashboardData = {
 
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const showToast = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -185,10 +187,10 @@ export default function AdminDashboard() {
               try {
                 const token = localStorage.getItem("nirmaan_token") || "";
                 const res = await api.post("/attendance/alert/low-attendance", { threshold: 75 }, { headers: authHeader(token) });
-                alert(res.data.message || "Alerts triggered successfully");
+                showToast('success', res.data.message || 'Alerts triggered successfully');
               } catch (error: unknown) {
                 const message = error instanceof Error ? error.message : "Unknown error";
-                alert("Failed to trigger alerts: " + message);
+                showToast('error', 'Failed to trigger alerts: ' + message);
               }
             }},
             { href: "/dashboard/admin/sms", label: "Send SMS Alerts", icon: "💬" },

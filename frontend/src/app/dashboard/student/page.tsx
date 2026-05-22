@@ -9,6 +9,7 @@ import DashboardShell from "@/components/DashboardShell";
 import { AnimatedCard } from "@/components/AnimatedCard";
 import { motion } from "framer-motion";
 import { BookOpen, TrendingUp, Award, BarChart3, Bell, Calendar, Sparkles, ClipboardList, MapPin, QrCode, Shield, ExternalLink } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 import NotificationSystem from "@/components/NotificationSystem";
 import AttendanceWidget from "@/components/AttendanceWidget";
 import EnhancedExamSystem from "@/components/EnhancedExamSystem";
@@ -35,6 +36,7 @@ type StudentData = {
 };
 
 export default function StudentDashboard() {
+  const showToast = useToast();
   const [data, setData] = useState<StudentData | null>(null);
 
   useEffect(() => {
@@ -268,9 +270,35 @@ export default function StudentDashboard() {
           <Link href="/dashboard/student/tests" className="inline-block rounded-full bg-[var(--brand)] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
             <BookOpen className="w-4 h-4 inline-block mr-2 -mt-1" /> Take Online Test
           </Link>
-          <a href={proctoringLaunchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]">
+          <button
+            onClick={async () => {
+              try {
+                const launchWindow = window.open("about:blank", "_blank", "noopener");
+                const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') + '/tests/proctoring/session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' , ...(localStorage.getItem('nirmaan_token') ? { Authorization: `Bearer ${localStorage.getItem('nirmaan_token')}` } : {})},
+                  body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                if (res.ok && data.data && data.data.url) {
+                  if (launchWindow) {
+                    launchWindow.location.href = data.data.url;
+                  } else {
+                    window.open(data.data.url, '_blank', 'noopener');
+                  }
+                } else {
+                  console.error('Proctoring session creation failed', data);
+                  showToast('error', 'Failed to create proctoring session.');
+                }
+              } catch (e) {
+                console.error('Proctoring launch error', e);
+                showToast('error', 'Failed to launch proctoring.');
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]"
+          >
             <Shield className="w-4 h-4 text-orange-500" /> Open AI Proctoring <ExternalLink className="w-3 h-3 opacity-80" />
-          </a>
+          </button>
           <Link href="/exam" className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold hover:bg-gray-50">
             <ExternalLink className="w-4 h-4" /> Exam Portal
           </Link>

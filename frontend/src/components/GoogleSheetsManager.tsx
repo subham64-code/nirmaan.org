@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { 
   FileSpreadsheet, 
   CheckCircle, 
@@ -50,6 +51,7 @@ export default function GoogleSheetsManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     checkSheetStatus();
@@ -79,7 +81,7 @@ export default function GoogleSheetsManager() {
       setSheetPreview(response.data.data);
       setSyncResult(null);
     } catch (error: any) {
-      alert("Failed to preview sheet: " + (error.response?.data?.message || error.message));
+      showToast("error", "Failed to preview sheet: " + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +99,7 @@ export default function GoogleSheetsManager() {
       // Refresh preview after sync
       await previewSheet();
     } catch (error: any) {
-      alert("Failed to sync sheet: " + (error.response?.data?.message || error.message));
+      showToast("error", "Failed to sync sheet: " + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }

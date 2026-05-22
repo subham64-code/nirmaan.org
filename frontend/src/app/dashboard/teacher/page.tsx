@@ -14,6 +14,7 @@ import GPSBasedAttendance from "@/components/GPSBasedAttendance";
 import QRAttendanceSystem from "@/components/QRAttendanceSystem";
 import EnhancedExamSystem from "@/components/EnhancedExamSystem";
 import { proctoringLaunchUrl } from "@/lib/constants";
+import { useToast } from "@/components/ToastProvider";
 
 interface TeacherStats {
   totalStudents: number;
@@ -28,6 +29,7 @@ interface TeacherStats {
 }
 
 export default function TeacherDashboard() {
+  const showToast = useToast();
   const [testTitle, setTestTitle] = useState("");
   const [studentId, setStudentId] = useState("");
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -49,17 +51,34 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     fetchTeacherStats();
-    // Get teacher name from localStorage or session
-    const name = typeof window !== "undefined" ? localStorage.getItem("nirmaan_user_name") || "" : "";
-    setTeacherName(name);
   }, []);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await api.get("/auth/me", { headers: authHeader(token) });
+        const name = response.data?.data?.name || response.data?.data?.email || "";
+        setTeacherName(name);
+        if (typeof window !== "undefined" && name) {
+          localStorage.setItem("nirmaan_user_name", name);
+        }
+      } catch (error) {
+        console.error("Failed to load teacher profile:", error);
+        const fallbackName = typeof window !== "undefined" ? localStorage.getItem("nirmaan_user_name") || "" : "";
+        setTeacherName(fallbackName);
+      }
+    };
+
+    loadProfile();
+  }, [token]);
 
   const fetchTeacherStats = async () => {
     try {
-      const response = await api.get("/admin/dashboard", { headers: authHeader(token) });
+      const response = await api.get("/teachers/dashboard", { headers: authHeader(token) });
       setStats(response.data.data);
     } catch (error) {
       console.error("Failed to fetch stats:", error);
+      showToast("error", "Failed to load class overview.");
     }
   };
 
@@ -261,9 +280,35 @@ export default function TeacherDashboard() {
           <a href="/exam" className="inline-flex items-center gap-2 rounded-full bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-700">
             <BookOpen className="w-4 h-4" /> Open Exam Portal
           </a>
-          <a href={proctoringLaunchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]">
+          <button
+            onClick={async () => {
+              try {
+                const launchWindow = window.open("about:blank", "_blank", "noopener");
+                const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') + '/tests/proctoring/session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' , ...(localStorage.getItem('nirmaan_token') ? { Authorization: `Bearer ${localStorage.getItem('nirmaan_token')}` } : {})},
+                  body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                if (res.ok && data.data && data.data.url) {
+                  if (launchWindow) {
+                    launchWindow.location.href = data.data.url;
+                  } else {
+                    window.open(data.data.url, '_blank', 'noopener');
+                  }
+                } else {
+                        console.error('Proctoring session creation failed', data);
+                        showMessage('Failed to create proctoring session.', 'error');
+                      }
+              } catch (e) {
+                console.error('Proctoring launch error', e);
+                      showMessage('Failed to launch proctoring.', 'error');
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--outline)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-2)]"
+          >
             <Shield className="w-4 h-4 text-orange-500" /> AI Proctoring <ExternalLink className="w-3 h-3 opacity-80" />
-          </a>
+          </button>
         </div>
       </motion.section>
 

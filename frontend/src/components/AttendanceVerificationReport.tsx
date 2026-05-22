@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, MapPin, Calendar, Clock, AlertCircle, Loader2, Filter } from 'lucide-react';
-import axios from 'axios';
+import { api, authHeader } from '@/lib/api';
+
 
 interface AttendanceVerification {
   _id: string;
@@ -39,8 +40,10 @@ export default function AttendanceVerificationReport() {
   const fetchAttendanceRecords = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/attendance/report?date=${selectedDate}`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('nirmaan_token') || '' : '';
+      const response = await api.get(`/attendance/report?date=${selectedDate}`, { headers: authHeader(token) });
       setRecords(response.data.data || []);
+
     } catch (error: any) {
       console.error('Failed to fetch records:', error);
       setMessage({
@@ -55,10 +58,12 @@ export default function AttendanceVerificationReport() {
   const verifyAttendance = async (recordId: string, isValid: boolean) => {
     try {
       setVerifyingId(recordId);
-      const response = await axios.post(`/api/attendance/${recordId}/verify`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('nirmaan_token') || '' : '';
+      const response = await api.post(`/attendance/${recordId}/verify`, {
         verified: isValid,
         verificationMethod: 'gps-check'
-      });
+      }, { headers: authHeader(token) });
+
 
       if (response.data.success) {
         setMessage({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { Clock, BookOpen, CheckCircle, AlertCircle, Play, ChevronRight, ChevronLeft, Flag, RotateCcw, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -40,6 +41,7 @@ export default function ExamSystem() {
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const testContainerRef = useRef<HTMLDivElement>(null);
   const windowFocusedRef = useRef(true);
+  const showToast = useToast();
 
   useEffect(() => {
     fetchAvailableTests();
@@ -139,7 +141,7 @@ export default function ExamSystem() {
       }
     } catch (error) {
       console.error("Failed to submit test:", error);
-      alert("Failed to submit test. Please try again.");
+      showToast("error", "Failed to submit test. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { useParams } from "next/navigation";
 import { api, authHeader } from "@/lib/api";
 import { TeacherAssessmentForm } from "@/components/TeacherAssessmentForm";
@@ -26,6 +27,7 @@ interface TestResult {
 }
 
 export default function TeacherAssessmentPage() {
+  const showToast = useToast();
   const params = useParams<{ testId: string; resultId: string }>();
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -176,7 +178,7 @@ export default function TeacherAssessmentPage() {
             totalMarks={testResult.test.totalMarks}
             onSubmitSuccess={() => {
               // Show success message or refresh
-              alert("Assessment submitted successfully!");
+              showToast('success', 'Assessment submitted successfully!');
             }}
           />
         </motion.div>

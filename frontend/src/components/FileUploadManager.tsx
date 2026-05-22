@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useToast } from "@/components/ToastProvider";
 import { StorageService, FileUploadResult } from "@/lib/storage";
 import { Upload, File, Trash2, Download, Eye } from "lucide-react";
 
@@ -14,6 +15,7 @@ export default function FileUploadManager() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState<"syllabus" | "questions">("syllabus");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showToast = useToast();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -37,7 +39,7 @@ export default function FileUploadManager() {
       setUploadedFiles(prev => [...prev, newFile]);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("File upload failed. Please try again.");
+      showToast("error", "File upload failed. Please try again.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -52,7 +54,7 @@ export default function FileUploadManager() {
       setUploadedFiles(prev => prev.filter(f => f.id !== file.id));
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("Failed to delete file. Please try again.");
+      showToast("error", "Failed to delete file. Please try again.");
     }
   };
 
