@@ -19,12 +19,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate required secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "Missing SSH_HOST, SSH_USER, or SSH_PRIVATE_KEY secret"
+            exit 1
+          fi
+
+      - name: Prepare SSH key file
+        run: |
+          set -e
+          KEY_PATH="${{ runner.temp }}/deploy_key"
+          mkdir -p "$(dirname "$KEY_PATH")"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+        shell: bash
+
       - name: "Copy compose to remote"
         uses: appleboy/scp-action@v0.1.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Use key_path instead of passing raw key to avoid parsing issues
+          key_path: ${{ runner.temp }}/deploy_key
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           source: 'deploy/docker-compose.remote.yml'
@@ -35,7 +56,8 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Use the prepared key file path
+          key_path: ${{ runner.temp }}/deploy_key
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           script: |
