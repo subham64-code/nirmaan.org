@@ -13,4 +13,8 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}/nirmaan_exam.org/.venv/Lib/site-packages"
   ]
+  ,
+  "python.analysis.packageIndexDepths": {
+    "tensorflow": 2
+  }
 }

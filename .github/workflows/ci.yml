@@ -11,9 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-    defaults:
-      run:
-        working-directory: backend
+    # removed defaults.run. Provide working-directory on individual run steps
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,6 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Debug: list proctoring workspace
+        working-directory: backend
         run: |
           echo "PWD: $(pwd)"
           ls -la
@@ -37,18 +36,18 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
+        working-directory: backend
         run: npm ci
 
       - name: Backend smoke test
+        working-directory: backend
         run: npm run test
 
   frontend:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-    defaults:
-      run:
-        working-directory: frontend
+    # removed defaults.run. Provide working-directory on individual run steps
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,9 +60,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
+        working-directory: frontend
         run: npm ci
 
       - name: Build frontend
+        working-directory: frontend
         run: npm run build
 
   proctoring:
