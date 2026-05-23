@@ -1,3 +1,42 @@
+Deployment helper
+=================
+
+This folder contains a small helper script to deploy the built images to a remote server.
+
+Usage
+-----
+
+From the repo root run:
+
+```bash
+./deploy/deploy_remote.sh <user@host> <ghcr-owner>
+```
+
+Examples
+--------
+
+- Copy compose file and deploy:
+
+```bash
+./deploy/deploy_remote.sh alice@prod.example.com my-ghcr-owner
+```
+
+- If you already have the compose file on the remote and don't want to copy it:
+
+```bash
+./deploy/deploy_remote.sh alice@prod.example.com my-ghcr-owner --no-scp
+```
+
+What it does
+------------
+- Copies `deploy/docker-compose.remote.yml` to `/tmp/docker-compose.remote.yml` on the remote (unless `--no-scp`).
+- Pulls the `latest` tags for `nirmaan-backend`, `nirmaan-frontend`, and `nirmaan-proctoring` from GHCR.
+- Runs `docker compose -f /tmp/docker-compose.remote.yml up -d --remove-orphans` on the remote host.
+
+Notes
+-----
+- Ensure your SSH key is available locally and the remote user can run Docker and Docker Compose.
+- Adjust `deploy/docker-compose.remote.yml` if you need different image tags or environment variables.
 # Deployment guide
 
 This document describes how to run the project locally with Docker Compose and how to publish images to GitHub Container Registry (GHCR) for remote deployment.

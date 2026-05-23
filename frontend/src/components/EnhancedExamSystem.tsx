@@ -1,11 +1,12 @@
 "use client";
 
 import "@/lib/screenfullShim";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { BookOpen, Users, Clock, Award, Play, BarChart3, Plus, Trash2, CheckCircle, AlertCircle, Sparkles, FileText } from "lucide-react";
 import { api, authHeader } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
 import { fallbackPredefinedQuestions } from "@/lib/predefinedQuestions";
+import { proctoringApiBaseUrl } from "@/lib/constants";
 
 interface Question {
   _id: string;
@@ -70,6 +71,18 @@ interface GeneratedQuestion {
   type?: string;
 }
 
+interface ProctoringCheckResult {
+  success?: boolean;
+  error?: string;
+  is_visible?: boolean;
+  eyes_open?: boolean;
+  direction?: string;
+  people_detected?: number;
+  face_detected?: boolean;
+  emotion?: string;
+  emotions?: Record<string, number>;
+}
+
 const aiQuestionTopics = [
   "JavaScript",
   "Artificial Intelligence",
@@ -108,8 +121,15 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [examSubmitted, setExamSubmitted] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [rightClickCount, setRightClickCount] = useState(0);
+  const [fullscreenExitCount, setFullscreenExitCount] = useState(0);
+  const [screenshotCount, setScreenshotCount] = useState(0);
   const [cheatingWarning, setCheatingWarning] = useState(false);
   const [examTerminated, setExamTerminated] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState<"idle" | "starting" | "ready" | "blocked">("idle");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [proctoringStatus, setProctoringStatus] = useState("Camera monitoring inactive.");
+  const [cameraReady, setCameraReady] = useState(false);
   
   // Form states
   const [newTest, setNewTest] = useState({
@@ -124,6 +144,11 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     availableUntil: "",
     questions: [] as Question[],
   });
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const proctoringBusyRef = useRef(false);
 
   useEffect(() => {
     fetchTests();
@@ -397,6 +422,87 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     setNewTest({ ...newTest, questions: updated });
   };
 
+  const recordProctoringEvent = useCallback(async (eventType: string, metadata: Record<string, unknown> = {}) => {
+    if (!selectedTest?._id) return;
+
+    try {
+      await api.post("/tests/proctoring/log-event", {
+        testId: selectedTest._id,
+        eventType,
+        metadata,
+      });
+    } catch (error) {
+      console.error("Failed to log proctoring event:", error);
+    }
+  }, [selectedTest?._id]);
+
+  const captureFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
+      return null;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.75);
+  }, []);
+
+  const postProctoringCheck = useCallback(async (path: string, image: string) => {
+    const response = await fetch(`${proctoringApiBaseUrl}${path}`, {
+      method: "POST",
+      mode: "cors",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ image }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Proctoring check failed: ${response.status}`);
+    }
+
+    return (await response.json()) as ProctoringCheckResult;
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    if (!takingExam || !selectedTest) return;
+
+    setCameraStatus("starting");
+    setCameraError(null);
+    setProctoringStatus("Requesting camera access...");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => null);
+      }
+
+      setCameraStatus("ready");
+      setCameraReady(true);
+      setProctoringStatus("Camera ready. Face, eye, gaze, and room checks are active.");
+      void recordProctoringEvent("camera_started", { status: "ready" });
+    } catch (error: any) {
+      const message = error?.message || "Camera access was denied or is unavailable.";
+      setCameraStatus("blocked");
+      setCameraReady(false);
+      setCameraError(message);
+      setProctoringStatus("Camera access is blocked. Proctoring will stay limited until access is granted.");
+      void recordProctoringEvent("camera-denied", { message });
+    }
+  }, [recordProctoringEvent, selectedTest, takingExam]);
+
   const startExam = async (test: Test) => {
     try {
       setLoading(true);
@@ -437,8 +543,15 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setTimeRemaining(test.durationMinutes * 60);
       setExamSubmitted(false);
       setTabSwitchCount(0);
+      setRightClickCount(0);
+      setFullscreenExitCount(0);
+      setScreenshotCount(0);
       setCheatingWarning(false);
       setExamTerminated(false);
+      setCameraStatus("idle");
+      setCameraError(null);
+      setProctoringStatus("Camera monitoring inactive.");
+      setCameraReady(false);
     } catch (error: any) {
       console.error("Failed to load exam:", error);
       const message = error?.response?.data?.message || "Failed to load exam. Please try again.";
@@ -495,10 +608,177 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     return () => clearInterval(timer);
   }, [takingExam, timeRemaining, examSubmitted]);
 
-  // Browser-level blocking is removed; the exam now relies on timed submission and proctoring logs.
   useEffect(() => {
-    if (!takingExam) return;
-  }, [takingExam]);
+    if (!takingExam || !selectedTest) return;
+
+    let cancelled = false;
+
+    void startCamera().catch((error) => {
+      if (!cancelled) {
+        console.error("Camera start error:", error);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      proctoringBusyRef.current = false;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [selectedTest, startCamera, takingExam]);
+
+  useEffect(() => {
+    if (!takingExam || !selectedTest || !cameraReady) return;
+
+    let cancelled = false;
+    const interval = window.setInterval(async () => {
+      if (cancelled || proctoringBusyRef.current) return;
+
+      const frame = captureFrame();
+      if (!frame) {
+        setProctoringStatus("Waiting for a camera frame...");
+        return;
+      }
+
+      proctoringBusyRef.current = true;
+      try {
+        const [face, eyes, gaze, people, landmarks] = await Promise.allSettled([
+          postProctoringCheck("/proctoring/check-face", frame),
+          postProctoringCheck("/proctoring/check-eyes", frame),
+          postProctoringCheck("/proctoring/check-gaze", frame),
+          postProctoringCheck("/proctoring/check-multiple-people", frame),
+          postProctoringCheck("/proctoring/check-landmarks", frame),
+        ]);
+
+        const alerts: string[] = [];
+
+      useEffect(() => {
+        if (!takingExam || !selectedTest || examSubmitted) return;
+
+        const requestFullscreen = async () => {
+          try {
+            if (!document.fullscreenElement) {
+              await document.documentElement.requestFullscreen?.();
+            }
+          } catch {
+            // Ignore unsupported browsers.
+          }
+        };
+
+        void requestFullscreen();
+
+        const handleVisibility = () => {
+          if (document.hidden) {
+            setTabSwitchCount((count) => count + 1);
+            void recordProctoringEvent("tab-switch", { message: "Tab switch detected" });
+          }
+        };
+
+        const handleBlur = () => {
+          setTabSwitchCount((count) => count + 1);
+          void recordProctoringEvent("window-blur", { message: "Window focus lost" });
+        };
+
+        const handleContextMenu = (event: MouseEvent) => {
+          event.preventDefault();
+          setRightClickCount((count) => count + 1);
+          void recordProctoringEvent("right-click", { message: "Right-click detected" });
+          return false;
+        };
+
+        const handleSelectStart = (event: Event) => {
+          event.preventDefault();
+          void recordProctoringEvent("text-selection", { message: "Text selection attempt blocked" });
+          return false;
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+          const keySig = [event.ctrlKey ? "Ctrl" : "", event.shiftKey ? "Shift" : "", event.altKey ? "Alt" : "", event.metaKey ? "Meta" : "", event.key].filter(Boolean).join("+");
+          if (event.key === "PrintScreen" || keySig.includes("Shift+S") || event.key === "F12" || keySig.includes("Ctrl+Shift+I") || keySig.includes("Ctrl+Shift+J") || keySig.includes("Ctrl+Shift+C")) {
+            event.preventDefault();
+            setScreenshotCount((count) => count + 1);
+            void recordProctoringEvent("screenshot-attempt", { key: keySig || event.key });
+          }
+        };
+
+        const handleFullscreenChange = () => {
+          if (!document.fullscreenElement) {
+            setFullscreenExitCount((count) => count + 1);
+            void recordProctoringEvent("fullscreen-exit", { message: "Fullscreen exited" });
+            void requestFullscreen();
+          }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibility);
+        window.addEventListener("blur", handleBlur);
+        document.addEventListener("contextmenu", handleContextMenu);
+        document.addEventListener("selectstart", handleSelectStart);
+        document.addEventListener("keydown", handleKeyDown);
+        document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+        return () => {
+          document.removeEventListener("visibilitychange", handleVisibility);
+          window.removeEventListener("blur", handleBlur);
+          document.removeEventListener("contextmenu", handleContextMenu);
+          document.removeEventListener("selectstart", handleSelectStart);
+          document.removeEventListener("keydown", handleKeyDown);
+          document.removeEventListener("fullscreenchange", handleFullscreenChange);
+        };
+      }, [examSubmitted, recordProctoringEvent, selectedTest, takingExam]);
+
+        if (eyes.status === "fulfilled" && eyes.value.success && eyes.value.eyes_open === false) {
+          alerts.push("eyes-closed");
+          void recordProctoringEvent("eyes-closed", { eyes: eyes.value });
+        }
+
+        if (gaze.status === "fulfilled" && gaze.value.success && ["looking_away", "no_face"].includes(gaze.value.direction || "")) {
+          alerts.push(gaze.value.direction || "gaze-alert");
+          void recordProctoringEvent("gaze-away", { gaze: gaze.value });
+        }
+
+        if (people.status === "fulfilled" && people.value.success && (people.value.people_detected || 0) > 1) {
+          alerts.push("multiple-people");
+          void recordProctoringEvent("multiple-people", { people: people.value });
+        }
+
+        if (landmarks.status === "fulfilled" && landmarks.value.success && (landmarks.value.emotion || "").toLowerCase() === "angry") {
+          alerts.push("facial-expression-alert");
+          void recordProctoringEvent("facial-expression-alert", { landmarks: landmarks.value });
+        }
+
+        setProctoringStatus(
+          alerts.length > 0
+            ? `Proctoring alert: ${alerts.join(", ")}`
+            : "Camera active. Face, eye, gaze, expression, and room checks are clear."
+        );
+      } catch (error) {
+        console.error("Proctoring capture error:", error);
+        setProctoringStatus("Proctoring check failed. Camera is still active, but verification could not complete.");
+      } finally {
+        proctoringBusyRef.current = false;
+      }
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [cameraReady, captureFrame, postProctoringCheck, recordProctoringEvent, selectedTest, takingExam]);
+
+  useEffect(() => {
+    if (!takingExam || !selectedTest || cameraStatus !== "blocked") return;
+
+    const retryTimer = window.setInterval(() => {
+      void startCamera().catch((error) => {
+        console.error("Camera retry error:", error);
+      });
+    }, 5000);
+
+    return () => window.clearInterval(retryTimer);
+  }, [cameraStatus, selectedTest, startCamera, takingExam]);
 
   // Student View
   if (userRole === "student") {
@@ -599,6 +879,63 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       
       return (
         <div className="bg-white rounded-lg shadow-lg border p-6 select-none">
+          <div className="mb-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-black/90">
+              <video ref={videoRef} autoPlay muted playsInline className="h-56 w-full bg-black object-cover" />
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Live Proctoring</h3>
+                  <p className="text-sm text-gray-500">Webcam capture and AI checks run while the exam is active.</p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    cameraStatus === "ready"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : cameraStatus === "blocked"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  {cameraStatus}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-gray-700">{proctoringStatus}</p>
+              {cameraError ? <p className="mt-2 text-sm text-red-600">{cameraError}</p> : null}
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">Tab switches</div>
+                  <div className="text-lg font-semibold">{tabSwitchCount}</div>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">Right-clicks</div>
+                  <div className="text-lg font-semibold">{rightClickCount}</div>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">Fullscreen exits</div>
+                  <div className="text-lg font-semibold">{fullscreenExitCount}</div>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">Screenshot attempts</div>
+                  <div className="text-lg font-semibold">{screenshotCount}</div>
+                </div>
+              </div>
+              {cameraStatus === "blocked" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void startCamera();
+                  }}
+                  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Enable Camera
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           {/* Cheating Warning Banner */}
           {cheatingWarning && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">

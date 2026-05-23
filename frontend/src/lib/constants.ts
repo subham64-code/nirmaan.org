@@ -82,6 +82,9 @@ export const proctoringLaunchUrl =
   process.env.NEXT_PUBLIC_PROCTORING_URL ||
   "http://127.0.0.1:5001/proctoring-launch";
 
+export const proctoringApiBaseUrl =
+  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+
 export const dailyAttendanceReportUrl =
   process.env.NEXT_PUBLIC_ATTENDANCE_REPORT_URL ||
   "https://docs.google.com/spreadsheets/d/1D4JBxZLZSHmXhrhLIX-JBrKmPhkpZ2MJX8k0Y6JNY04/edit?gid=905174869#gid=905174869";

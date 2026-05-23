@@ -1,7 +1,10 @@
 import axios from "axios";
 
+const rawBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const base = rawBase.endsWith("/") ? rawBase : rawBase + "/";
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  baseURL: base,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -11,10 +14,9 @@ export const api = axios.create({
 // Add request interceptor for debugging and URL normalization
 api.interceptors.request.use(
   (config) => {
-    // Normalize URL: remove leading slash to ensure it appends to baseURL correctly
-    if (config.url && config.url.startsWith('/')) {
-      config.url = config.url.substring(1);
-    }
+    // Keep URL as provided; baseURL now always has a trailing slash so
+    // axios will concatenate correctly whether `config.url` starts with
+    // a leading slash or not.
 
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("nirmaan_token");

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, authHeader } from "@/lib/api";
+import { proctoringApiBaseUrl } from "@/lib/constants";
 
 type Question = { prompt: string; options: string[] };
 type TestPayload = { title: string; durationMinutes: number; totalMarks: number; questions: Question[] };
@@ -19,7 +20,7 @@ type ProctoringCheckResult = {
   emotions?: Record<string, number>;
 };
 
-const PROCTORING_BASE_URL = process.env.NEXT_PUBLIC_PROCTORING_URL || "http://127.0.0.1:5001";
+const PROCTORING_BASE_URL = proctoringApiBaseUrl;
 
 export default function StudentTestAttemptPage() {
   const params = useParams<{ id: string }>();
