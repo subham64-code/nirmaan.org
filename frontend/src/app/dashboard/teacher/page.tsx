@@ -190,7 +190,9 @@ export default function TeacherDashboard() {
         { headers: authHeader(token) }
       );
 
-      setAiGeneratedQuestions(response.data.data.text);
+      const payload = response.data?.data || {};
+      const generatedText = payload.text || response.data?.text || JSON.stringify(payload.questions || response.data?.questions || [], null, 2);
+      setAiGeneratedQuestions(generatedText);
       showMessage("Questions generated successfully!", "success");
     } catch (error) {
       console.error("AI generation error:", error);
@@ -284,22 +286,11 @@ export default function TeacherDashboard() {
             onClick={async () => {
               try {
                 const launchWindow = window.open("about:blank", "_blank", "noopener");
-                const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') + '/tests/proctoring/session', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' , ...(localStorage.getItem('nirmaan_token') ? { Authorization: `Bearer ${localStorage.getItem('nirmaan_token')}` } : {})},
-                  body: JSON.stringify({}),
-                });
-                const data = await res.json();
-                if (res.ok && data.data && data.data.url) {
-                  if (launchWindow) {
-                    launchWindow.location.href = data.data.url;
-                  } else {
-                    window.open(data.data.url, '_blank', 'noopener');
-                  }
+                if (launchWindow) {
+                  launchWindow.location.href = proctoringLaunchUrl;
                 } else {
-                        console.error('Proctoring session creation failed', data);
-                        showMessage('Failed to create proctoring session.', 'error');
-                      }
+                  window.open(proctoringLaunchUrl, '_blank', 'noopener');
+                }
               } catch (e) {
                 console.error('Proctoring launch error', e);
                       showMessage('Failed to launch proctoring.', 'error');

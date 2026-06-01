@@ -185,8 +185,8 @@ export default function GoogleSheetAttendance({
           {displayRows.map((r, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50 transition">
               <div>
-                <div className="font-semibold text-gray-900">{r['Name'] || r['Student'] || r['student_name'] || r['name'] || Object.values(r)[0]}</div>
-                <div className="text-xs text-gray-500 font-mono">{r['ID'] || r['Student ID'] || r['id'] || r['nirmaanId'] || 'NO-ID'}</div>
+                <div className="font-semibold text-gray-900">{(r as any)['Name'] || (r as any)['Student'] || (r as any)['student_name'] || (r as any)['name'] || Object.values(r)[0]}</div>
+                <div className="text-xs text-gray-500 font-mono">{(r as any)['ID'] || (r as any)['Student ID'] || (r as any)['id'] || (r as any)['nirmaanId'] || 'NO-ID'}</div>
               </div>
               <div className="text-right">
                 <div className={`text-sm font-bold ${r['percent'] >= 75 ? 'text-green-600' : 'text-red-600'}`}>{r['percent']}%</div>

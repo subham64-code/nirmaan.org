@@ -14,6 +14,8 @@ interface Question {
   options: string[];
   answer: number;
   marks: number;
+  type?: 'mcq' | 'coding' | 'essay' | 'ai' | 'omr';
+  meta?: Record<string, any>;
 }
 
 interface Test {
@@ -61,6 +63,9 @@ interface QuestionBankItem {
   options: string[];
   correctAnswer: "A" | "B" | "C" | "D";
   marks?: number;
+  difficulty?: string;
+  type?: string;
+  meta?: Record<string, any>;
 }
 
 interface GeneratedQuestion {
@@ -103,6 +108,12 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [showGradingModal, setShowGradingModal] = useState(false);
+  const [gradingPayload, setGradingPayload] = useState<any | null>(null);
+  const [awardedMarks, setAwardedMarks] = useState<number[]>([]);
+  const [gradingNotes, setGradingNotes] = useState("");
+  const [gradingFeedback, setGradingFeedback] = useState("");
+  const [gradingGrade, setGradingGrade] = useState("Pass");
   const [examLoadError, setExamLoadError] = useState<string | null>(null);
   const [questionBank, setQuestionBank] = useState<QuestionBankItem[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -117,14 +128,16 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   // Exam taking states
   const [takingExam, setTakingExam] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<number[]>([]);
+  const [answers, setAnswers] = useState<any[]>([]);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [examSubmitted, setExamSubmitted] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [rightClickCount, setRightClickCount] = useState(0);
   const [fullscreenExitCount, setFullscreenExitCount] = useState(0);
   const [screenshotCount, setScreenshotCount] = useState(0);
+  const [copyPasteCount, setCopyPasteCount] = useState(0);
   const [cheatingWarning, setCheatingWarning] = useState(false);
+  const [tabSwitchOverlay, setTabSwitchOverlay] = useState(false);
   const [examTerminated, setExamTerminated] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<"idle" | "starting" | "ready" | "blocked">("idle");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -193,6 +206,64 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     }
   };
 
+  const openGradingModal = async (resultId: string) => {
+    if (!selectedTest) return;
+    try {
+      setLoading(true);
+      const response = await api.get(`/tests/${selectedTest._id}/result/${resultId}`);
+      const payload = response.data?.data;
+      setGradingPayload(payload || null);
+
+      // initialize awarded marks with sensible defaults
+      const initMarks = (payload?.test?.questions || []).map((q: any, idx: number) => {
+        const userAns = (payload?.answers || [])[idx];
+        if ((q?.correctAnswer !== undefined || q?.correctAnswer !== null) && typeof userAns === 'number') {
+          return userAns === q.correctAnswer ? (q.marks || 0) : 0;
+        }
+        // default 0 for manual types
+        return 0;
+      });
+      setAwardedMarks(initMarks);
+      setGradingNotes("");
+      setGradingFeedback("");
+      setGradingGrade("Pass");
+      setShowGradingModal(true);
+    } catch (error) {
+      console.error("Failed to fetch result detail:", error);
+      showToast("error", "Failed to load submission details for grading.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitAssessment = async () => {
+    if (!selectedTest || !gradingPayload) return;
+    try {
+      setLoading(true);
+      const totalMarks = awardedMarks.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0);
+      const body = {
+        notes: gradingNotes,
+        grade: gradingGrade,
+        marks: totalMarks,
+        feedback: gradingFeedback,
+        strengths: [],
+        areasForImprovement: [],
+        recommendations: "",
+      };
+
+      await api.post(`/tests/${selectedTest._id}/result/${gradingPayload._id}/assessment`, body);
+      showToast("success", "Assessment submitted.");
+      setShowGradingModal(false);
+      // refresh results list
+      fetchTestResults(selectedTest._id);
+    } catch (error: any) {
+      console.error("Failed to submit assessment:", error);
+      showToast("error", error?.response?.data?.message || "Failed to submit assessment");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const downloadExamReport = async (testId: string, format: "pdf" | "doc") => {
     try {
       const response = await api.get(`/tests/${testId}/report/${format}`, { responseType: "blob" });
@@ -256,11 +327,11 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       const payload = response.data?.data || {};
       const rawText = payload.text || JSON.stringify(payload.questions || []);
       const generated = Array.isArray(payload.questions) && payload.questions.length > 0
-        ? payload.questions
+        ? (payload.questions as any[])
         : parseGeneratedQuestions(String(rawText));
-      const mapped: QuestionBankItem[] = generated
-        .filter((item) => item && item.question)
-        .map((item, index) => {
+      const mapped: QuestionBankItem[] = (generated as any[])
+        .filter((item: any) => item && item.question)
+        .map((item: any, index: number) => {
           const options = Array.isArray(item.options) && item.options.length >= 4
             ? item.options.slice(0, 4)
             : ["Option A", "Option B", "Option C", "Option D"];
@@ -371,7 +442,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     const mapped: Question[] = selectedRows.map((row) => ({
       _id: row._id,
       prompt: row.question,
-      options: row.options,
+      options: Array.isArray(row.options) ? row.options.slice(0, 4) : ["", "", "", ""],
       answer: ["A", "B", "C", "D"].indexOf(row.correctAnswer),
       marks: row.marks || 1,
     }));
@@ -395,31 +466,39 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   };
 
   const addQuestion = () => {
-    setNewTest({
-      ...newTest,
+    setNewTest((prev) => ({
+      ...prev,
       questions: [
-        ...newTest.questions,
+        ...prev.questions,
         {
           _id: Date.now().toString(),
           prompt: "",
+          type: "mcq",
           options: ["", "", "", ""],
           answer: 0,
           marks: 10,
+          meta: {},
         },
       ],
-    });
+    }));
   };
 
   const updateQuestion = (index: number, field: string, value: any) => {
-    const updated = [...newTest.questions];
-    updated[index] = { ...updated[index], [field]: value };
-    setNewTest({ ...newTest, questions: updated });
+    setNewTest((prev) => {
+      const updated = [...prev.questions];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, questions: updated };
+    });
   };
 
   const updateOption = (qIndex: number, oIndex: number, value: string) => {
-    const updated = [...newTest.questions];
-    updated[qIndex].options[oIndex] = value;
-    setNewTest({ ...newTest, questions: updated });
+    setNewTest((prev) => {
+      const updated = [...prev.questions];
+      const question = { ...updated[qIndex], options: [...updated[qIndex].options] };
+      question.options[oIndex] = value;
+      updated[qIndex] = question;
+      return { ...prev, questions: updated };
+    });
   };
 
   const recordProctoringEvent = useCallback(async (eventType: string, metadata: Record<string, unknown> = {}) => {
@@ -499,7 +578,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setCameraReady(false);
       setCameraError(message);
       setProctoringStatus("Camera access is blocked. Proctoring will stay limited until access is granted.");
-      void recordProctoringEvent("camera-denied", { message });
+      void recordProctoringEvent("camera_denied", { message });
     }
   }, [recordProctoringEvent, selectedTest, takingExam]);
 
@@ -517,9 +596,9 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
           return;
         }
       } catch (attemptError) {
-        console.warn("Attempt precheck failed, continuing with exam load:", attemptError);
-        showToast("warning", "Exam precheck failed, loading the exam directly.");
-      }
+          console.warn("Attempt precheck failed, continuing with exam load:", attemptError);
+          showToast("info", "Exam precheck failed, loading the exam directly.");
+        }
 
       // Validate test has questions
       if (!test.questions || !Array.isArray(test.questions) || test.questions.length === 0) {
@@ -539,15 +618,17 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setSelectedTest(test);
       setTakingExam(true);
       setCurrentQuestionIndex(0);
-      setAnswers(new Array(test.questions.length).fill(-1));
+      setAnswers(new Array(test.questions.length).fill(null));
       setTimeRemaining(test.durationMinutes * 60);
       setExamSubmitted(false);
       setTabSwitchCount(0);
       setRightClickCount(0);
       setFullscreenExitCount(0);
       setScreenshotCount(0);
+      setCopyPasteCount(0);
       setCheatingWarning(false);
       setExamTerminated(false);
+      setTabSwitchOverlay(false);
       setCameraStatus("idle");
       setCameraError(null);
       setProctoringStatus("Camera monitoring inactive.");
@@ -580,7 +661,12 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     
     try {
       setLoading(true);
-      await api.post(`/tests/${selectedTest._id}/submit`, { answers });
+      const submitPayload: any = { answers };
+      if (examTerminated) {
+        submitPayload.cheatingReason = tabSwitchCount >= 3 ? "multiple_tab_switches" : "multiple_rule_violations";
+        submitPayload.cheatingEvents = { tabSwitchCount, rightClickCount, fullscreenExitCount, screenshotCount, copyPasteCount };
+      }
+      await api.post(`/tests/${selectedTest._id}/submit`, submitPayload);
       setExamSubmitted(true);
       setTakingExam(false);
       fetchTests();
@@ -655,98 +741,24 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
 
         const alerts: string[] = [];
 
-      useEffect(() => {
-        if (!takingExam || !selectedTest || examSubmitted) return;
-
-        const requestFullscreen = async () => {
-          try {
-            if (!document.fullscreenElement) {
-              await document.documentElement.requestFullscreen?.();
-            }
-          } catch {
-            // Ignore unsupported browsers.
-          }
-        };
-
-        void requestFullscreen();
-
-        const handleVisibility = () => {
-          if (document.hidden) {
-            setTabSwitchCount((count) => count + 1);
-            void recordProctoringEvent("tab-switch", { message: "Tab switch detected" });
-          }
-        };
-
-        const handleBlur = () => {
-          setTabSwitchCount((count) => count + 1);
-          void recordProctoringEvent("window-blur", { message: "Window focus lost" });
-        };
-
-        const handleContextMenu = (event: MouseEvent) => {
-          event.preventDefault();
-          setRightClickCount((count) => count + 1);
-          void recordProctoringEvent("right-click", { message: "Right-click detected" });
-          return false;
-        };
-
-        const handleSelectStart = (event: Event) => {
-          event.preventDefault();
-          void recordProctoringEvent("text-selection", { message: "Text selection attempt blocked" });
-          return false;
-        };
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-          const keySig = [event.ctrlKey ? "Ctrl" : "", event.shiftKey ? "Shift" : "", event.altKey ? "Alt" : "", event.metaKey ? "Meta" : "", event.key].filter(Boolean).join("+");
-          if (event.key === "PrintScreen" || keySig.includes("Shift+S") || event.key === "F12" || keySig.includes("Ctrl+Shift+I") || keySig.includes("Ctrl+Shift+J") || keySig.includes("Ctrl+Shift+C")) {
-            event.preventDefault();
-            setScreenshotCount((count) => count + 1);
-            void recordProctoringEvent("screenshot-attempt", { key: keySig || event.key });
-          }
-        };
-
-        const handleFullscreenChange = () => {
-          if (!document.fullscreenElement) {
-            setFullscreenExitCount((count) => count + 1);
-            void recordProctoringEvent("fullscreen-exit", { message: "Fullscreen exited" });
-            void requestFullscreen();
-          }
-        };
-
-        document.addEventListener("visibilitychange", handleVisibility);
-        window.addEventListener("blur", handleBlur);
-        document.addEventListener("contextmenu", handleContextMenu);
-        document.addEventListener("selectstart", handleSelectStart);
-        document.addEventListener("keydown", handleKeyDown);
-        document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-        return () => {
-          document.removeEventListener("visibilitychange", handleVisibility);
-          window.removeEventListener("blur", handleBlur);
-          document.removeEventListener("contextmenu", handleContextMenu);
-          document.removeEventListener("selectstart", handleSelectStart);
-          document.removeEventListener("keydown", handleKeyDown);
-          document.removeEventListener("fullscreenchange", handleFullscreenChange);
-        };
-      }, [examSubmitted, recordProctoringEvent, selectedTest, takingExam]);
-
         if (eyes.status === "fulfilled" && eyes.value.success && eyes.value.eyes_open === false) {
-          alerts.push("eyes-closed");
-          void recordProctoringEvent("eyes-closed", { eyes: eyes.value });
+          alerts.push("eyes_closed");
+          void recordProctoringEvent("eyes_closed", { eyes: eyes.value });
         }
 
         if (gaze.status === "fulfilled" && gaze.value.success && ["looking_away", "no_face"].includes(gaze.value.direction || "")) {
           alerts.push(gaze.value.direction || "gaze-alert");
-          void recordProctoringEvent("gaze-away", { gaze: gaze.value });
+          void recordProctoringEvent("gaze_away", { gaze: gaze.value });
         }
 
         if (people.status === "fulfilled" && people.value.success && (people.value.people_detected || 0) > 1) {
-          alerts.push("multiple-people");
-          void recordProctoringEvent("multiple-people", { people: people.value });
+          alerts.push("multiple_people");
+          void recordProctoringEvent("multiple_people", { people: people.value });
         }
 
         if (landmarks.status === "fulfilled" && landmarks.value.success && (landmarks.value.emotion || "").toLowerCase() === "angry") {
-          alerts.push("facial-expression-alert");
-          void recordProctoringEvent("facial-expression-alert", { landmarks: landmarks.value });
+          alerts.push("facial_expression_alert");
+          void recordProctoringEvent("facial_expression_alert", { landmarks: landmarks.value });
         }
 
         setProctoringStatus(
@@ -768,6 +780,125 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
     };
   }, [cameraReady, captureFrame, postProctoringCheck, recordProctoringEvent, selectedTest, takingExam]);
 
+  // Attach global exam event listeners (tab switch, blur, right-click, selection, screenshots, fullscreen)
+  useEffect(() => {
+    if (!takingExam || !selectedTest || examSubmitted) return;
+
+    const requestFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen?.();
+        }
+      } catch {
+        // Ignore unsupported browsers.
+      }
+    };
+
+    void requestFullscreen();
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setTabSwitchOverlay(true);
+        setTabSwitchCount((count) => count + 1);
+        void recordProctoringEvent("tab_switch", { message: "Tab switch detected" });
+      } else {
+        setTabSwitchOverlay(false);
+      }
+    };
+
+    const handleBlur = () => {
+      setTabSwitchOverlay(true);
+      setTabSwitchCount((count) => count + 1);
+      void recordProctoringEvent("window_blur", { message: "Window focus lost" });
+    };
+
+    const handleFocus = () => {
+      setTabSwitchOverlay(false);
+    };
+
+    const handleContextMenu = (event: any) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setRightClickCount((count) => count + 1);
+      void recordProctoringEvent("right_click", { message: "Right-click detected" });
+      return false;
+    };
+
+    const handleSelectStart = (event: any) => {
+      event.preventDefault();
+      void recordProctoringEvent("text_selection", { message: "Text selection attempt blocked" });
+      return false;
+    };
+
+    const handleCopy = (event: ClipboardEvent) => {
+      event.preventDefault();
+      if (event.clipboardData) event.clipboardData.setData('text/plain', '');
+      setCopyPasteCount((count) => count + 1);
+      void recordProctoringEvent("copy_attempt", { message: "Copy blocked" });
+    };
+
+    const handlePaste = (event: ClipboardEvent) => {
+      event.preventDefault();
+      setCopyPasteCount((count) => count + 1);
+      void recordProctoringEvent("paste_attempt", { message: "Paste blocked" });
+    };
+
+    const handleCut = (event: ClipboardEvent) => {
+      event.preventDefault();
+      setCopyPasteCount((count) => count + 1);
+      void recordProctoringEvent("cut_attempt", { message: "Cut blocked" });
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isCtrlShift = event.ctrlKey && event.shiftKey;
+      const key = event.key.toLowerCase();
+      const blockedKeys = ["f12", "printscreen"];
+      const blockedCombos = [
+        isCtrlShift && ["i", "j", "c", "s"].includes(key),
+        event.ctrlKey && key === "u",
+        event.ctrlKey && key === "s",
+        (event.metaKey && event.altKey && key === "i"),
+      ];
+      if (blockedKeys.includes(key) || blockedCombos.some(Boolean)) {
+        try { event.preventDefault(); event.stopPropagation(); } catch {}
+        setScreenshotCount((count) => count + 1);
+        void recordProctoringEvent("screenshot_attempt", { key });
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setFullscreenExitCount((count) => count + 1);
+        void recordProctoringEvent("fullscreen_exit", { message: "Fullscreen exited" });
+        void requestFullscreen();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("selectstart", handleSelectStart);
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("paste", handlePaste);
+    document.addEventListener("cut", handleCut);
+    document.addEventListener("keydown", handleKeyDown as any);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("selectstart", handleSelectStart);
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("paste", handlePaste);
+      document.removeEventListener("cut", handleCut);
+      document.removeEventListener("keydown", handleKeyDown as any);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [examSubmitted, recordProctoringEvent, selectedTest, takingExam]);
+
   useEffect(() => {
     if (!takingExam || !selectedTest || cameraStatus !== "blocked") return;
 
@@ -779,6 +910,16 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
 
     return () => window.clearInterval(retryTimer);
   }, [cameraStatus, selectedTest, startCamera, takingExam]);
+
+  // Auto-terminate exam on excessive violations
+  useEffect(() => {
+    if (!takingExam || examSubmitted || examTerminated) return;
+    const totalInfractions = tabSwitchCount + rightClickCount + fullscreenExitCount + screenshotCount + copyPasteCount;
+    if (tabSwitchCount >= 3 || totalInfractions >= 3) {
+      setExamTerminated(true);
+      void submitExam();
+    }
+  }, [tabSwitchCount, rightClickCount, fullscreenExitCount, screenshotCount, copyPasteCount, takingExam, examSubmitted, examTerminated]);
 
   // Student View
   if (userRole === "student") {
@@ -879,6 +1020,17 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       
       return (
         <div className="bg-white rounded-lg shadow-lg border p-6 select-none">
+          {tabSwitchOverlay && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-red-600/95 backdrop-blur-xl">
+              <div className="max-w-md text-center text-white">
+                <div className="mb-6 text-7xl">⚠️</div>
+                <h2 className="mb-4 text-3xl font-bold">Tab Switch Detected!</h2>
+                <p className="mb-2 text-lg">You have switched away from the exam tab.</p>
+                <p className="mb-6 text-red-200">This is a serious violation. Repeated offenses will auto-submit your exam.</p>
+                <p className="text-sm text-red-300">Return to the exam window to continue.</p>
+              </div>
+            </div>
+          )}
           <div className="mb-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-black/90">
               <video ref={videoRef} autoPlay muted playsInline className="h-56 w-full bg-black object-cover" />
@@ -920,6 +1072,10 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                 <div className="rounded-lg bg-white p-3 border border-gray-200">
                   <div className="text-gray-500">Screenshot attempts</div>
                   <div className="text-lg font-semibold">{screenshotCount}</div>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">Copy/Paste</div>
+                  <div className="text-lg font-semibold">{copyPasteCount}</div>
                 </div>
               </div>
               {cameraStatus === "blocked" ? (
@@ -976,7 +1132,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
 
           {/* Question Tabs */}
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {selectedTest?.questions && Array.isArray(selectedTest.questions) && selectedTest.questions.length > 0 ? (
+              {selectedTest?.questions && Array.isArray(selectedTest.questions) && selectedTest.questions.length > 0 ? (
               selectedTest.questions.map((_, index) => (
                 <button
                   key={index}
@@ -984,7 +1140,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     currentQuestionIndex === index
                       ? "bg-blue-600 text-white"
-                      : answers[index] !== -1
+                      : answers[index] !== null && answers[index] !== -1
                       ? "bg-green-100 text-green-700 hover:bg-green-200"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -1005,7 +1161,37 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
               <>
                 <h3 className="text-lg font-semibold mb-4">{currentQuestion.prompt}</h3>
                 <div className="space-y-3">
-                  {currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                  {currentQuestion?.type === 'coding' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Code Answer</label>
+                      <textarea
+                        value={answers[currentQuestionIndex] ?? ''}
+                        onChange={(e) => {
+                          const copy = [...answers];
+                          copy[currentQuestionIndex] = e.target.value;
+                          setAnswers(copy);
+                        }}
+                        className="w-full p-3 border rounded-md font-mono text-sm"
+                        rows={10}
+                        placeholder={(currentQuestion as any)?.meta?.starterCode || 'Write your code here...'}
+                      />
+                    </div>
+                  ) : (currentQuestion?.type === 'essay' || currentQuestion?.type === 'ai') ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Answer</label>
+                      <textarea
+                        value={answers[currentQuestionIndex] ?? ''}
+                        onChange={(e) => {
+                          const copy = [...answers];
+                          copy[currentQuestionIndex] = e.target.value;
+                          setAnswers(copy);
+                        }}
+                        className="w-full p-3 border rounded-md text-sm"
+                        rows={6}
+                        placeholder="Type your answer here..."
+                      />
+                    </div>
+                  ) : (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ? (
                     currentQuestion.options.map((option, index) => (
                       <label
                         key={index}
@@ -1520,12 +1706,14 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                             <button
                               type="button"
                               onClick={() => {
-                                const mapped = {
+                                const mapped: Question = {
                                   _id: q._id + Date.now().toString(),
                                   prompt: q.question,
-                                  options: q.options,
+                                  type: (q.type as Question['type']) || 'mcq',
+                                  options: q.options || [],
                                   answer: ["A", "B", "C", "D"].indexOf(q.correctAnswer),
                                   marks: q.marks || 10,
+                                  meta: q.meta || {},
                                 };
                                 setNewTest((prev) => ({
                                   ...prev,
@@ -1571,6 +1759,15 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
+                      <div className="mb-2 flex items-center gap-3">
+                        <label className="text-sm">Type:</label>
+                        <select title="Question type" value={(q as any).type || 'mcq'} onChange={(e) => updateQuestion(qIndex, 'type', e.target.value)} className="px-2 py-1 border rounded">
+                          <option value="mcq">MCQ / OMR</option>
+                          <option value="coding">Coding</option>
+                          <option value="essay">Long Answer</option>
+                          <option value="ai">AI Generated</option>
+                        </select>
+                      </div>
                       <input
                         type="text"
                         value={q.prompt}
@@ -1578,41 +1775,75 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                         className="w-full px-3 py-2 border rounded-lg mb-3"
                         placeholder="Question text..."
                       />
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        {q.options.map((opt, oIndex) => (
-                          <div key={oIndex} className="flex items-center gap-2">
+                      {(q as any).type === 'coding' ? (
+                        <div className="space-y-2 mb-3">
+                          <label className="text-sm">Starter Code (optional)</label>
+                          <textarea value={(q as any).meta?.starterCode || ''} onChange={(e) => updateQuestion(qIndex, 'meta', { ...(q as any).meta, starterCode: e.target.value })} className="w-full px-3 py-2 border rounded text-sm" rows={4} placeholder="Starter code for this question..." title="Starter code" />
+                          <div className="grid grid-cols-2 gap-2 items-center">
+                            <div>
+                              <label className="text-sm">Language</label>
+                              <select title="Programming language" value={(q as any).meta?.language || 'python'} onChange={(e) => updateQuestion(qIndex, 'meta', { ...(q as any).meta, language: e.target.value })} className="w-full px-2 py-1 border rounded">
+                                <option value="python">Python</option>
+                                <option value="javascript">JavaScript</option>
+                                <option value="c">C</option>
+                                <option value="cpp">C++</option>
+                                <option value="java">Java</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-sm">Marks</label>
+                              <input type="number" value={q.marks} onChange={(e) => updateQuestion(qIndex, 'marks', Number(e.target.value || 0))} className="w-full px-2 py-1 border rounded" title="Marks for coding question" />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (q as any).type === 'essay' ? (
+                        <div className="space-y-2 mb-3">
+                          <label className="text-sm">Expected Answer Notes (optional)</label>
+                          <textarea value={(q as any).meta?.notes || ''} onChange={(e) => updateQuestion(qIndex, 'meta', { ...(q as any).meta, notes: e.target.value })} className="w-full px-3 py-2 border rounded text-sm" rows={3} placeholder="Expected answer notes..." title="Expected answer notes" />
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm">Marks:</label>
+                            <input type="number" value={q.marks} onChange={(e) => updateQuestion(qIndex, 'marks', Number(e.target.value || 0))} className="w-24 px-2 py-1 border rounded" title="Marks for essay question" />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            {q.options.map((opt, oIndex) => (
+                              <div key={oIndex} className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  title={`Set option ${oIndex + 1} as correct answer`}
+                                  name={`correct-${qIndex}`}
+                                  checked={q.answer === oIndex}
+                                  onChange={() => updateQuestion(qIndex, "answer", oIndex)}
+                                  className="w-4 h-4"
+                                />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                                  className="flex-1 px-3 py-1.5 border rounded text-sm"
+                                  placeholder={`Option ${oIndex + 1}`}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm">Marks:</label>
                             <input
-                              type="radio"
-                              title={`Set option ${oIndex + 1} as correct answer`}
-                              name={`correct-${qIndex}`}
-                              checked={q.answer === oIndex}
-                              onChange={() => updateQuestion(qIndex, "answer", oIndex)}
-                              className="w-4 h-4"
-                            />
-                            <input
-                              type="text"
-                              value={opt}
-                              onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
-                              className="flex-1 px-3 py-1.5 border rounded text-sm"
-                              placeholder={`Option ${oIndex + 1}`}
+                              type="number"
+                              title="Question marks"
+                              value={q.marks}
+                              onChange={(e) => {
+                                const val = e.target.value === "" ? 0 : Number(e.target.value);
+                                updateQuestion(qIndex, "marks", Number.isFinite(val) ? val : 0);
+                              }}
+                              className="w-20 px-3 py-1.5 border rounded text-sm"
+                              min={0}
                             />
                           </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm">Marks:</label>
-                        <input
-                          type="number"
-                          title="Question marks"
-                          value={q.marks}
-                          onChange={(e) => {
-                            const val = e.target.value === "" ? 0 : Number(e.target.value);
-                            updateQuestion(qIndex, "marks", Number.isFinite(val) ? val : 0);
-                          }}
-                          className="w-20 px-3 py-1.5 border rounded text-sm"
-                          min={0}
-                        />
-                      </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1715,9 +1946,94 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                       <p className="font-bold">{result.score}</p>
                       <p className="text-xs text-gray-500">{new Date(result.submittedAt).toLocaleString()}</p>
                     </div>
+                    <div className="ml-4">
+                      <button
+                        onClick={() => openGradingModal(result._id)}
+                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+                      >
+                        Review
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grading Modal */}
+      {showGradingModal && gradingPayload && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Grade Submission: {gradingPayload.test?.title}</h3>
+                <p className="text-sm text-gray-500">Student: {gradingPayload.student?.name} • {gradingPayload.student?.email}</p>
+              </div>
+              <button onClick={() => setShowGradingModal(false)} className="text-sm text-gray-500 hover:text-black">Close</button>
+            </div>
+            <div className="p-5 space-y-4">
+              {(gradingPayload.test?.questions || []).map((q: any, idx: number) => (
+                <div key={idx} className="p-3 border rounded-md">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-semibold">Q{idx + 1}: {q.prompt}</p>
+                      <p className="text-sm text-gray-600 mt-1">Student answer:</p>
+                      <div className="mt-1 text-sm text-gray-800 bg-gray-50 p-2 rounded">
+                        {typeof gradingPayload.answers?.[idx] === 'number' ? (
+                          (q.options && q.options[gradingPayload.answers[idx]]) || `Answer index ${gradingPayload.answers[idx]}`
+                        ) : (
+                          <pre className="whitespace-pre-wrap">{String(gradingPayload.answers?.[idx] ?? '')}</pre>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-4 w-36">
+                      <label className="text-xs text-gray-600">Marks awarded (of {q.marks || 0})</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={q.marks || 0}
+                        value={awardedMarks[idx] ?? 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value || 0);
+                          setAwardedMarks((prev) => {
+                            const copy = [...prev];
+                            copy[idx] = Number.isFinite(val) ? val : 0;
+                            return copy;
+                          });
+                        }}
+                        className="w-full px-2 py-1 border rounded mt-1"
+                        title="Marks awarded for this answer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div>
+                <label className="block text-sm font-medium">Grade</label>
+                <select value={gradingGrade} onChange={(e) => setGradingGrade(e.target.value)} className="w-40 px-2 py-1 border rounded" title="Select assessment grade">
+                  <option value="Pass">Pass</option>
+                  <option value="Fail">Fail</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Feedback</label>
+                <textarea value={gradingFeedback} onChange={(e) => setGradingFeedback(e.target.value)} className="w-full px-3 py-2 border rounded" rows={3} placeholder="Write feedback for the student..." title="Feedback" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Notes</label>
+                <textarea value={gradingNotes} onChange={(e) => setGradingNotes(e.target.value)} className="w-full px-3 py-2 border rounded" rows={2} placeholder="Internal grading notes..." title="Notes" />
+              </div>
+
+              <div className="flex justify-end gap-2 border-t pt-3">
+                <button onClick={() => setShowGradingModal(false)} className="px-4 py-2 border rounded">Cancel</button>
+                <button onClick={submitAssessment} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Submit Assessment</button>
+              </div>
             </div>
           </div>
         </div>

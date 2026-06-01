@@ -3,9 +3,15 @@ const mongoose = require("mongoose");
 const questionSchema = new mongoose.Schema(
   {
     prompt: { type: String, required: true },
-    options: { type: [String], required: true },
-    answer: { type: Number, required: true },
+    // Type of question: 'mcq' | 'coding' | 'essay' | 'ai' | 'omr'
+    type: { type: String, enum: ['mcq', 'coding', 'essay', 'ai', 'omr'], default: 'mcq' },
+    // Options are used for MCQ/OMR type questions
+    options: { type: [String], default: [] },
+    // For MCQ/OMR questions, `answer` is the correct option index. For other types it may be undefined.
+    answer: { type: Number },
     marks: { type: Number, default: 1 },
+    // Optional meta field for coding questions (starter code, language, tests)
+    meta: { type: mongoose.Schema.Types.Mixed },
   },
   { _id: false }
 );

@@ -274,21 +274,10 @@ export default function StudentDashboard() {
             onClick={async () => {
               try {
                 const launchWindow = window.open("about:blank", "_blank", "noopener");
-                const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api') + '/tests/proctoring/session', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' , ...(localStorage.getItem('nirmaan_token') ? { Authorization: `Bearer ${localStorage.getItem('nirmaan_token')}` } : {})},
-                  body: JSON.stringify({}),
-                });
-                const data = await res.json();
-                if (res.ok && data.data && data.data.url) {
-                  if (launchWindow) {
-                    launchWindow.location.href = data.data.url;
-                  } else {
-                    window.open(data.data.url, '_blank', 'noopener');
-                  }
+                if (launchWindow) {
+                  launchWindow.location.href = proctoringLaunchUrl;
                 } else {
-                  console.error('Proctoring session creation failed', data);
-                  showToast('error', 'Failed to create proctoring session.');
+                  window.open(proctoringLaunchUrl, '_blank', 'noopener');
                 }
               } catch (e) {
                 console.error('Proctoring launch error', e);

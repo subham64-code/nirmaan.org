@@ -364,7 +364,7 @@ export default function TeacherLoginWithID() {
                   {loading ? "Verifying..." : "Login with OTP"}
                 </button>
                 <button
-                  onClick={requestOTP}
+                  onClick={() => requestOTP()}
                   disabled={loading}
                   className="px-6 py-3 rounded-xl border-2 border-white/20 text-white hover:bg-white/20 transition-colors"
                 >

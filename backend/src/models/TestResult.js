@@ -4,7 +4,8 @@ const testResultSchema = new mongoose.Schema(
   {
     test: { type: mongoose.Schema.Types.ObjectId, ref: "Test", required: true },
     student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    answers: { type: [Number], default: [] },
+    // Answers can be numeric indexes for MCQ/OMR or text (string) for coding/essay responses
+    answers: { type: [mongoose.Schema.Types.Mixed], default: [] },
     score: { type: Number, required: true },
     startedAt: { type: Date, required: true },
     submittedAt: { type: Date, required: true },

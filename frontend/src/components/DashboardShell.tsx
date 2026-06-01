@@ -54,7 +54,7 @@ export default function DashboardShell({
     try {
       const profileRoute = userRole === "student" ? "/students/me" : "/auth/me";
       const response = await api.get(profileRoute, { 
-        headers: authHeader(token) 
+        headers: authHeader(token ?? undefined) 
       });
       
       if (response.data.data?.profile) {
@@ -91,7 +91,7 @@ export default function DashboardShell({
             {actions && <div className="flex items-center gap-2">{actions}</div>}
             <UserProfileHeader 
               userName={userName} 
-              userRole={userRole}
+              userRole={userRole ?? undefined}
               refreshTrigger={refreshKey}
             />
           </div>

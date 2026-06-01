@@ -1,5 +1,10 @@
-import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "firebase/storage";
-import { storage } from "./firebase";
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject, FirebaseStorage } from "firebase/storage";
+import { storage as firebaseStorage } from "./firebase";
+
+function getStorage(): FirebaseStorage {
+  if (!firebaseStorage) throw new Error("Firebase Storage is not initialized (not in browser)");
+  return firebaseStorage;
+}
 
 export interface FileUploadResult {
   url: string;
@@ -13,7 +18,7 @@ export class StorageService {
   static async uploadFile(file: File, path?: string): Promise<FileUploadResult> {
     const fileName = `${Date.now()}-${file.name}`;
     const filePath = path ? `${path}/${fileName}` : fileName;
-    const storageRef = ref(storage, filePath);
+    const storageRef = ref(getStorage(), filePath);
     
     try {
       const snapshot = await uploadBytes(storageRef, file);
@@ -41,7 +46,7 @@ export class StorageService {
   }
 
   static async listFiles(folder: string): Promise<string[]> {
-    const folderRef = ref(storage, folder);
+    const folderRef = ref(getStorage(), folder);
     const result = await listAll(folderRef);
     
     const urls = await Promise.all(
@@ -54,7 +59,7 @@ export class StorageService {
   }
 
   static async deleteFile(fullPath: string): Promise<void> {
-    const fileRef = ref(storage, fullPath);
+    const fileRef = ref(getStorage(), fullPath);
     await deleteObject(fileRef);
   }
 

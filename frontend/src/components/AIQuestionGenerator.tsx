@@ -78,7 +78,9 @@ export default function AIQuestionGenerator({ userRole = "teacher" }: { userRole
         const payload = response.data.data || {};
         const rawQuestions = Array.isArray(payload.questions) && payload.questions.length > 0
           ? payload.questions
-          : parseGeneratedQuestions(String(payload.text || ""));
+          : Array.isArray(response.data.questions) && response.data.questions.length > 0
+            ? response.data.questions
+            : parseGeneratedQuestions(String(payload.text || response.data.text || ""));
 
         const normalized = (Array.isArray(rawQuestions) ? rawQuestions : [rawQuestions]).map((item: any) => ({
           question: String(item.question || item.prompt || "").trim(),

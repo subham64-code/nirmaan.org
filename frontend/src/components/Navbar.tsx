@@ -142,9 +142,8 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition-all"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition-all"
             >
-              {link.icon && link.icon}
               {link.label}
             </Link>
           ))}
@@ -300,7 +299,6 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition-colors"
               >
-                {link.icon && link.icon}
                 {link.label}
               </Link>
             ))}

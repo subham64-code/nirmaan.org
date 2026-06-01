@@ -25,8 +25,13 @@ jobs:
         run: |
           echo "PWD: $(pwd)"
           ls -la
-          test -d "../nirmaan_exam.org" && echo "OK: ../nirmaan_exam.org present" || test -d "nirmaan_exam.org" && echo "OK: nirmaan_exam.org present" || echo "MISSING: nirmaan_exam.org"
-        
+          if [ -d "../nirmaan_exam.org" ]; then
+            echo "OK: ../nirmaan_exam.org present"
+          elif [ -d "nirmaan_exam.org" ]; then
+            echo "OK: nirmaan_exam.org present"
+          else
+            echo "MISSING: nirmaan_exam.org"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -1,0 +1,46 @@
+%% System architecture for Nirmaan (Mermaid)
+flowchart LR
+  subgraph ClientLayer[Client Layer]
+    Browser[Web Browser / Mobile]
+  end
+
+  subgraph Frontend[Frontend]
+    NextJS[Next.js (frontend)]
+    Static[Static assets / CDN]
+  end
+
+  subgraph Gateway[API Gateway / Reverse Proxy]
+    NGINX[NGINX / Cloud Load Balancer]
+  end
+
+  subgraph Backend[Backend Services]
+    Express[Node.js / Express API]
+    Flask[Flask Proctoring App]
+    MLServices[AI / ML microservices]
+  end
+
+  subgraph Data[Data Layer]
+    Mongo[(MongoDB)]
+    FileStore[(File storage / GridFS or S3)]
+  end
+
+  subgraph External[External Services]
+    SendGrid[SendGrid]
+    Twilio[Twilio]
+    Gemini[Google Gemini]
+    DeepSeek[DeepSeek]
+    Ollama[Ollama]
+  end
+
+  Browser -->|HTTPS| NextJS
+  NextJS -->|API calls| NGINX
+  NGINX --> Express
+  NGINX --> Flask
+  Express --> Mongo
+  Express --> FileStore
+  Flask --> MLServices
+  MLServices --> FileStore
+  MLServices -->|AI calls| External
+  Express -->|Email/SMS| SendGrid & Twilio
+  Express -->|AI| Gemini & DeepSeek & Ollama
+

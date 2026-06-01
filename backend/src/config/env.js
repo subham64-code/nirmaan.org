@@ -2,10 +2,20 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+const resolvedMongoUri = process.env.MONGO_URI && process.env.MONGO_URI.trim() ? process.env.MONGO_URI.trim() : "";
+
+// Fail fast so misconfiguration (missing/empty MONGO_URI) is obvious.
+if (!resolvedMongoUri) {
+  throw new Error(
+    "Missing/empty environment variable MONGO_URI. Set it (recommended):\n" +
+      "MONGO_URI=mongodb+srv://subham:subham@subham.uo6qhe6.mongodb.net/nirmaan_org"
+  );
+}
+
 const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.PORT) || 5000,
-  mongoUri: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/nirmaan_org",
+  mongoUri: resolvedMongoUri,
   jwtSecret: process.env.JWT_SECRET || "change-me-super-secret",
   jwtExpiry: process.env.JWT_EXPIRY || "7d",
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES) || 10,
@@ -29,11 +39,10 @@ const config = {
   emailApiKey: process.env.EMAIL_API_KEY || "",
 };
 
-console.log("🛠️ Config Loaded:", {
-  port: config.port,
-  googleClientId: config.googleOauthClientId ? config.googleOauthClientId.substring(0, 15) + "..." : "MISSING",
-  mongoUri: config.mongoUri.substring(0, 15) + "...",
-  rateLimitMax: config.nodeEnv === 'development' ? 10000 : "Standard"
-});
+// Log startup info without leaking secrets
+if (config.nodeEnv === 'development') {
+  console.log(`[env] Server configured on port ${config.port} in ${config.nodeEnv} mode`);
+}
+
 
 module.exports = config;

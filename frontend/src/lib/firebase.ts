@@ -23,10 +23,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize services only in browser environment
-let analytics = null;
-let auth = null;
-let storage = null;
-let firestore = null;
+let analytics: ReturnType<typeof getAnalytics> | null = null;
+let auth: ReturnType<typeof getAuth> | null = null;
+let storage: ReturnType<typeof getStorage> | null = null;
+let firestore: ReturnType<typeof getFirestore> | null = null;
 
 if (typeof window !== 'undefined') {
   try {

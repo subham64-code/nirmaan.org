@@ -1,4 +1,5 @@
 export interface PredefinedStudent {
+  _id?: string;
   id: string;
   name: string;
   email: string;

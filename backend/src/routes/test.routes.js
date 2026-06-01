@@ -270,18 +270,20 @@ router.get("/:id", auth(["student", "teacher", "admin"]), async (req, res) => {
   try {
     const isStudent = req.user.role === "student";
     const selectFields = isStudent
-      ? "title course targetAudience durationMinutes availableFrom availableUntil totalMarks questions.prompt questions.options questions.marks"
-      : "title course targetAudience durationMinutes availableFrom availableUntil totalMarks questions.prompt questions.options questions.answer questions.marks";
+      ? "title course targetAudience durationMinutes availableFrom availableUntil totalMarks questions.prompt questions.options questions.marks questions.type questions.meta"
+      : "title course targetAudience durationMinutes availableFrom availableUntil totalMarks questions.prompt questions.options questions.answer questions.marks questions.type questions.meta";
       
     const test = await Test.findById(req.params.id).select(selectFields);
     if (!test) return fail(res, 404, "Test not found");
     
-    // For students, don't show correct answers
+    // For students, don't show correct answers but keep question type/meta
     if (isStudent) {
       test.questions = test.questions.map(q => ({
         prompt: q.prompt,
         options: q.options,
-        marks: q.marks
+        marks: q.marks,
+        type: q.type,
+        meta: q.meta
       }));
     }
     
@@ -526,11 +528,21 @@ router.post("/:id/submit", auth(["student"]), async (req, res) => {
       return fail(res, 400, "Invalid number of answers");
     }
 
-    // Calculate score
-    const score = test.questions.reduce((sum, q, idx) => {
+    // Calculate score only for auto-gradable question types (MCQ/OMR). Coding/essay/AI require manual grading.
+    let score = 0;
+    for (let idx = 0; idx < test.questions.length; idx++) {
+      const q = test.questions[idx];
       const userAnswer = answers[idx];
-      return userAnswer === q.answer ? sum + q.marks : sum;
-    }, 0);
+      if (!q) continue;
+      const qType = q.type || 'mcq';
+      if ((qType === 'mcq' || qType === 'omr') && typeof q.answer !== 'undefined') {
+        // Accept numeric index answers for MCQ/OMR
+        if (userAnswer === q.answer) {
+          score += (q.marks || 0);
+        }
+      }
+      // For coding/essay/ai types, leave score contribution to manual assessment (0 for now)
+    }
 
     // Create or update result
     // Prepare result payload, include cheating metadata when provided
@@ -634,6 +646,43 @@ router.post("/:id/submit", auth(["student"]), async (req, res) => {
   } catch (error) {
     console.error("Test submission error:", error);
     return fail(res, 500, "Failed to submit test: " + error.message);
+  }
+});
+
+// DEV-ONLY: Create test without auth (for local automated testing)
+// WARNING: This route is only enabled when NODE_ENV !== 'production'
+router.post("/dev/create", async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return fail(res, 403, 'Dev endpoint disabled in production');
+    }
+
+    const payload = req.body || {};
+    // If no createdBy provided, use a known dev teacher id
+    payload.createdBy = payload.createdBy || '60f000000000000000000001';
+    // Ensure required fields
+    if (!payload.title || !payload.course) return fail(res, 400, 'title and course are required');
+
+    const test = await Test.create({
+      title: payload.title,
+      course: payload.course,
+      targetAudience: payload.targetAudience || '',
+      durationMinutes: payload.durationMinutes || 60,
+      totalMarks: payload.totalMarks || 0,
+      questions: payload.questions || [],
+      createdBy: payload.createdBy,
+      isPublished: payload.isPublished !== undefined ? payload.isPublished : false,
+    });
+
+    try {
+      await logAction('system', 'test.dev-create', { testId: test._id, title: test.title });
+    } catch (e) {
+      console.warn('logAction failed (dev-create):', e && e.message ? e.message : e);
+    }
+    return created(res, test, 'Dev test created');
+  } catch (error) {
+    console.error('Dev create test error:', error);
+    return fail(res, 500, 'Failed to create dev test: ' + error.message);
   }
 });
 

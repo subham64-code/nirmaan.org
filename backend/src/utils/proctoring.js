@@ -88,6 +88,17 @@ class ProctoringService {
       window_blur: "medium",
       network_change: "medium",
       keyboard_shortcut: "low",
+      text_selection: "medium",
+      screenshot_attempt: "high",
+      copy_attempt: "medium",
+      paste_attempt: "medium",
+      cut_attempt: "medium",
+      camera_denied: "medium",
+      face_not_visible: "high",
+      eyes_closed: "medium",
+      gaze_away: "high",
+      multiple_people: "critical",
+      facial_expression_alert: "low",
     };
     return severityMap[eventType] || "low";
   }

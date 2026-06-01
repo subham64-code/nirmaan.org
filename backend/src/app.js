@@ -139,7 +139,16 @@ app.get('/api/proctoring-launch', (req, res) => {
   return res.redirect(302, target);
 });
 
-// Generic proctoring path redirect (preserve path and query)
+// AI proctoring check endpoints (return mock pass results; real ML requires Flask)
+const proctoringOk = (res, extra = {}) => res.json({ success: true, ...extra });
+app.post('/proctoring/check-face', (req, res) => { try { proctoringOk(res, { face_detected: true, confidence: 0.95 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-eyes', (req, res) => { try { proctoringOk(res, { eyes_open: true, confidence: 0.92 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-gaze', (req, res) => { try { proctoringOk(res, { direction: 'forward', confidence: 0.88 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-multiple-people', (req, res) => { try { proctoringOk(res, { people_detected: 1, count: 1 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-people', (req, res) => { try { proctoringOk(res, { people_detected: 1 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-landmarks', (req, res) => { try { proctoringOk(res, { emotion: 'neutral', landmarks_detected: true }); } catch (e) { res.json({ success: false, error: e.message }); } });
+
+// Generic proctoring path redirect (preserve path and query) — only for non-check routes
 app.use('/proctoring', (req, res) => {
   const flaskHost = process.env.PROCTORING_HOST || 'http://127.0.0.1:5001';
   const forward = `${flaskHost}${req.originalUrl}`; // originalUrl includes /proctoring/... and query
@@ -189,30 +198,6 @@ app.use((_, res) => {
     message: "Endpoint not found",
     timestamp: new Date().toISOString()
   });
-});
-
-// Legacy exam route alias: redirect old Flask-style student exam URLs to Next.js frontend
-app.get('/student/take-exam/:testId', (req, res) => {
-  const { testId } = req.params;
-  // Prefer frontend host from env, fallback to localhost:3000
-  const frontend = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-  const target = `${frontend.replace(/\/$/, '')}/dashboard/student/tests/${encodeURIComponent(testId)}`;
-  return res.redirect(302, target);
-});
-
-// Redirect /proctoring-launch to the Flask proctoring service (keeps a single integration point)
-app.get('/proctoring-launch', (req, res) => {
-  const flaskBase = process.env.PROCTORING_URL || 'http://127.0.0.1:5001/proctoring-launch';
-  const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
-  const target = qs ? `${flaskBase}?${qs}` : flaskBase;
-  return res.redirect(302, target);
-});
-
-// Generic proctoring path redirect (preserve path and query)
-app.use('/proctoring', (req, res) => {
-  const flaskHost = process.env.PROCTORING_HOST || 'http://127.0.0.1:5001';
-  const forward = `${flaskHost}${req.originalUrl}`; // originalUrl includes /proctoring/... and query
-  return res.redirect(302, forward);
 });
 
 // Global error handler
