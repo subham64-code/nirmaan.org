@@ -141,7 +141,7 @@ app.get('/api/proctoring-launch', (req, res) => {
 
 // AI proctoring check endpoints (return mock pass results; real ML requires Flask)
 const proctoringOk = (res, extra = {}) => res.json({ success: true, ...extra });
-app.post('/proctoring/check-face', (req, res) => { try { proctoringOk(res, { face_detected: true, confidence: 0.95 }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-face', (req, res) => { try { proctoringOk(res, { face_detected: true, is_visible: true, confidence: 0.95 }); } catch (e) { res.json({ success: false, error: e.message }); } });
 app.post('/proctoring/check-eyes', (req, res) => { try { proctoringOk(res, { eyes_open: true, confidence: 0.92 }); } catch (e) { res.json({ success: false, error: e.message }); } });
 app.post('/proctoring/check-gaze', (req, res) => { try { proctoringOk(res, { direction: 'forward', confidence: 0.88 }); } catch (e) { res.json({ success: false, error: e.message }); } });
 app.post('/proctoring/check-multiple-people', (req, res) => { try { proctoringOk(res, { people_detected: 1, count: 1 }); } catch (e) { res.json({ success: false, error: e.message }); } });

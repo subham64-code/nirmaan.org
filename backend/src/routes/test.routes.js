@@ -176,6 +176,7 @@ router.get("/", auth(["student", "teacher", "admin"]), async (req, res) => {
       // Build OR conditions: tests assigned to the student OR tests with no explicit assignments but matching audience
       const audienceMatchConditions = [
         { targetAudience: "" },
+        { targetAudience: "all" },
         { targetAudience: studentCourse },
         { targetAudience: "industry" },
         { targetAudience: { $regex: `^both:${studentCourse}$`, $options: "i" } },

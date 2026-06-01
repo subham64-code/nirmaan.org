@@ -22,7 +22,7 @@ type ProctoringCheckResult = {
 
 const PROCTORING_BASE_URL = proctoringApiBaseUrl;
 const MAX_TAB_SWITCHES = 3;
-const MAX_TOTAL_INFRACTIONS = 5;
+const MAX_TOTAL_INFRACTIONS = 3;
 
 export default function StudentTestAttemptPage() {
   const params = useParams<{ id: string }>();
