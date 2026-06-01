@@ -1,7 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
   "framework": "nextjs",
+  "buildCommand": "npm run build",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://nirmaan-backend.vercel.app/api"
   }
