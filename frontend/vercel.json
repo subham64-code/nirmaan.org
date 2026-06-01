@@ -2,6 +2,6 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://nirmaan-backend.vercel.app/api"
+    "NEXT_PUBLIC_API_URL": "https://nirmaan-backend-eudz.onrender.com/api"
   }
 }
