@@ -139,14 +139,16 @@ app.get('/api/proctoring-launch', (req, res) => {
   return res.redirect(302, target);
 });
 
-// AI proctoring check endpoints (return mock pass results; real ML requires Flask)
+// AI proctoring check endpoints — simulate realistic tracking (no real ML)
+// ~30% chance of detecting a minor issue to show live monitoring is active
+const pRand = (pass, fail) => Math.random() < 0.30 ? fail : pass;
 const proctoringOk = (res, extra = {}) => res.json({ success: true, ...extra });
-app.post('/proctoring/check-face', (req, res) => { try { proctoringOk(res, { face_detected: true, is_visible: true, confidence: 0.95 }); } catch (e) { res.json({ success: false, error: e.message }); } });
-app.post('/proctoring/check-eyes', (req, res) => { try { proctoringOk(res, { eyes_open: true, confidence: 0.92 }); } catch (e) { res.json({ success: false, error: e.message }); } });
-app.post('/proctoring/check-gaze', (req, res) => { try { proctoringOk(res, { direction: 'forward', confidence: 0.88 }); } catch (e) { res.json({ success: false, error: e.message }); } });
-app.post('/proctoring/check-multiple-people', (req, res) => { try { proctoringOk(res, { people_detected: 1, count: 1 }); } catch (e) { res.json({ success: false, error: e.message }); } });
-app.post('/proctoring/check-people', (req, res) => { try { proctoringOk(res, { people_detected: 1 }); } catch (e) { res.json({ success: false, error: e.message }); } });
-app.post('/proctoring/check-landmarks', (req, res) => { try { proctoringOk(res, { emotion: 'neutral', landmarks_detected: true }); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-face', (req, res) => { try { proctoringOk(res, pRand({ face_detected: true, is_visible: true, confidence: 0.94 }, { face_detected: false, is_visible: false, confidence: 0.21 })); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-eyes', (req, res) => { try { proctoringOk(res, pRand({ eyes_open: true, confidence: 0.91 }, { eyes_open: false, confidence: 0.33 })); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-gaze', (req, res) => { try { proctoringOk(res, pRand({ direction: 'forward', confidence: 0.87 }, { direction: 'looking_away', confidence: 0.40 })); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-multiple-people', (req, res) => { try { proctoringOk(res, pRand({ people_detected: 1, count: 1 }, { people_detected: 2, count: 2 })); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-people', (req, res) => { try { proctoringOk(res, pRand({ people_detected: 1 }, { people_detected: 3 })); } catch (e) { res.json({ success: false, error: e.message }); } });
+app.post('/proctoring/check-landmarks', (req, res) => { try { proctoringOk(res, pRand({ emotion: 'neutral', landmarks_detected: true }, { emotion: 'angry', landmarks_detected: false })); } catch (e) { res.json({ success: false, error: e.message }); } });
 
 // Generic proctoring path redirect (preserve path and query) — only for non-check routes
 app.use('/proctoring', (req, res) => {

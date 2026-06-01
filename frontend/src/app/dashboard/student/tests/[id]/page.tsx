@@ -38,6 +38,7 @@ export default function StudentTestAttemptPage() {
   const [screenshotCount, setScreenshotCount] = useState(0);
   const [copyPasteCount, setCopyPasteCount] = useState(0);
   const [infractions, setInfractions] = useState<Array<{ type: string; at: string }>>([]);
+  const [proctoringViolationCount, setProctoringViolationCount] = useState(0);
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [cameraStatus, setCameraStatus] = useState<"idle" | "starting" | "ready" | "blocked">("idle");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -176,11 +177,11 @@ export default function StudentTestAttemptPage() {
           postProctoringCheck("/proctoring/check-landmarks", frame),
         ]);
         const alerts: string[] = [];
-        if (face.status === "fulfilled" && face.value.success && face.value.is_visible === false) { alerts.push("face-not-visible"); await logInfraction("face_not_visible", { face: face.value }); }
-        if (eyes.status === "fulfilled" && eyes.value.success && eyes.value.eyes_open === false) { alerts.push("eyes-closed"); await logInfraction("eyes_closed", { eyes: eyes.value }); }
-        if (gaze.status === "fulfilled" && gaze.value.success && ["looking_away", "no_face"].includes(gaze.value.direction || "")) { alerts.push(gaze.value.direction || "gaze-alert"); await logInfraction("gaze_away", { gaze: gaze.value }); }
-        if (people.status === "fulfilled" && people.value.success && (people.value.people_detected || 0) > 1) { alerts.push("multiple-people"); await logInfraction("multiple_people", { people: people.value }); }
-        if (landmarks.status === "fulfilled" && landmarks.value.success && (landmarks.value.emotion || "").toLowerCase() === "angry") { alerts.push("facial-expression-alert"); await logInfraction("facial_expression_alert", { landmarks: landmarks.value }); }
+        if (face.status === "fulfilled" && face.value.success && face.value.is_visible === false) { alerts.push("face-not-visible"); await logInfraction("face_not_visible", { face: face.value }); setProctoringViolationCount((c) => c + 1); }
+        if (eyes.status === "fulfilled" && eyes.value.success && eyes.value.eyes_open === false) { alerts.push("eyes-closed"); await logInfraction("eyes_closed", { eyes: eyes.value }); setProctoringViolationCount((c) => c + 1); }
+        if (gaze.status === "fulfilled" && gaze.value.success && ["looking_away", "no_face"].includes(gaze.value.direction || "")) { alerts.push(gaze.value.direction || "gaze-alert"); await logInfraction("gaze_away", { gaze: gaze.value }); setProctoringViolationCount((c) => c + 1); }
+        if (people.status === "fulfilled" && people.value.success && (people.value.people_detected || 0) > 1) { alerts.push("multiple-people"); await logInfraction("multiple_people", { people: people.value }); setProctoringViolationCount((c) => c + 1); }
+        if (landmarks.status === "fulfilled" && landmarks.value.success && (landmarks.value.emotion || "").toLowerCase() === "angry") { alerts.push("facial-expression-alert"); await logInfraction("facial_expression_alert", { landmarks: landmarks.value }); setProctoringViolationCount((c) => c + 1); }
         setProctoringStatus(alerts.length > 0 ? `Proctoring alert: ${alerts.join(", ")}` : "Camera active. All checks clear.");
       } catch (error) {
         console.error("Proctoring capture error:", error);
@@ -326,7 +327,7 @@ export default function StudentTestAttemptPage() {
 
   useEffect(() => {
     if (!autoSubmitted) {
-      const totalInfractions = tabSwitchCount + rightClickCount + selectionCount + fullscreenExitCount + screenshotCount + copyPasteCount;
+      const totalInfractions = tabSwitchCount + rightClickCount + selectionCount + fullscreenExitCount + screenshotCount + copyPasteCount + proctoringViolationCount;
       if (tabSwitchCount >= MAX_TAB_SWITCHES || totalInfractions >= MAX_TOTAL_INFRACTIONS) {
         (async () => {
           try {
@@ -342,7 +343,7 @@ export default function StudentTestAttemptPage() {
         })();
       }
     }
-  }, [answers, autoSubmitted, copyPasteCount, fullscreenExitCount, infractions, params.id, rightClickCount, screenshotCount, selectionCount, startedAt, tabSwitchCount]);
+  }, [answers, autoSubmitted, copyPasteCount, fullscreenExitCount, infractions, params.id, proctoringViolationCount, rightClickCount, screenshotCount, selectionCount, startedAt, tabSwitchCount]);
 
   const submit = useCallback(async () => {
     const token = localStorage.getItem("nirmaan_token") || "";
@@ -371,7 +372,7 @@ export default function StudentTestAttemptPage() {
   if (!test) return <div className="section">Loading test...</div>;
 
   return (
-    <div className="section space-y-6">
+    <div className="section space-y-6 select-none" style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {tabSwitchOverlay && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-red-600/95 backdrop-blur-xl">
           <div className="max-w-md text-center text-white">
@@ -428,6 +429,10 @@ export default function StudentTestAttemptPage() {
             <div className="rounded-xl bg-[var(--surface-2)] p-3">
               <div className="text-[var(--muted-foreground)]">Copy/Paste</div>
               <div className="text-xl font-semibold">{copyPasteCount}</div>
+            </div>
+            <div className="rounded-xl bg-[var(--surface-2)] p-3">
+              <div className="text-[var(--muted-foreground)]">AI Tracking</div>
+              <div className="text-xl font-semibold">{proctoringViolationCount}</div>
             </div>
             <div className="rounded-xl bg-[var(--surface-2)] p-3">
               <div className="text-[var(--muted-foreground)]">Camera</div>

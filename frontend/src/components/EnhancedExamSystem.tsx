@@ -143,6 +143,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [proctoringStatus, setProctoringStatus] = useState("Camera monitoring inactive.");
   const [cameraReady, setCameraReady] = useState(false);
+  const [proctoringViolationCount, setProctoringViolationCount] = useState(0);
   
   // Form states
   const [newTest, setNewTest] = useState({
@@ -626,6 +627,7 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
       setFullscreenExitCount(0);
       setScreenshotCount(0);
       setCopyPasteCount(0);
+      setProctoringViolationCount(0);
       setCheatingWarning(false);
       setExamTerminated(false);
       setTabSwitchOverlay(false);
@@ -744,21 +746,25 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
         if (eyes.status === "fulfilled" && eyes.value.success && eyes.value.eyes_open === false) {
           alerts.push("eyes_closed");
           void recordProctoringEvent("eyes_closed", { eyes: eyes.value });
+          setProctoringViolationCount((c) => c + 1);
         }
 
         if (gaze.status === "fulfilled" && gaze.value.success && ["looking_away", "no_face"].includes(gaze.value.direction || "")) {
           alerts.push(gaze.value.direction || "gaze-alert");
           void recordProctoringEvent("gaze_away", { gaze: gaze.value });
+          setProctoringViolationCount((c) => c + 1);
         }
 
         if (people.status === "fulfilled" && people.value.success && (people.value.people_detected || 0) > 1) {
           alerts.push("multiple_people");
           void recordProctoringEvent("multiple_people", { people: people.value });
+          setProctoringViolationCount((c) => c + 1);
         }
 
         if (landmarks.status === "fulfilled" && landmarks.value.success && (landmarks.value.emotion || "").toLowerCase() === "angry") {
           alerts.push("facial_expression_alert");
           void recordProctoringEvent("facial_expression_alert", { landmarks: landmarks.value });
+          setProctoringViolationCount((c) => c + 1);
         }
 
         setProctoringStatus(
@@ -914,12 +920,12 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
   // Auto-terminate exam on excessive violations
   useEffect(() => {
     if (!takingExam || examSubmitted || examTerminated) return;
-    const totalInfractions = tabSwitchCount + rightClickCount + fullscreenExitCount + screenshotCount + copyPasteCount;
+    const totalInfractions = tabSwitchCount + rightClickCount + fullscreenExitCount + screenshotCount + copyPasteCount + proctoringViolationCount;
     if (tabSwitchCount >= 3 || totalInfractions >= 3) {
       setExamTerminated(true);
       void submitExam();
     }
-  }, [tabSwitchCount, rightClickCount, fullscreenExitCount, screenshotCount, copyPasteCount, takingExam, examSubmitted, examTerminated]);
+  }, [tabSwitchCount, rightClickCount, fullscreenExitCount, screenshotCount, copyPasteCount, proctoringViolationCount, takingExam, examSubmitted, examTerminated]);
 
   // Student View
   if (userRole === "student") {
@@ -1076,6 +1082,10 @@ export default function EnhancedExamSystem({ userRole }: { userRole: "student" |
                 <div className="rounded-lg bg-white p-3 border border-gray-200">
                   <div className="text-gray-500">Copy/Paste</div>
                   <div className="text-lg font-semibold">{copyPasteCount}</div>
+                </div>
+                <div className="rounded-lg bg-white p-3 border border-gray-200">
+                  <div className="text-gray-500">AI Tracking</div>
+                  <div className="text-lg font-semibold">{proctoringViolationCount}</div>
                 </div>
               </div>
               {cameraStatus === "blocked" ? (
