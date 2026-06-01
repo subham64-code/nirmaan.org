@@ -5,7 +5,6 @@ const nextConfig = {
   // Production optimizations
   compress: true,
   poweredByHeader: false,
-  outputFileTracingRoot: path.resolve(__dirname, '..'),
   // Allowed dev origins for loading _next assets when accessed from LAN devices.
   // Add your local network origin (including port) if you access the dev server remotely.
   allowedDevOrigins: [
