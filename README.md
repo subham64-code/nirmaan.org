@@ -71,3 +71,4 @@ Full-stack platform for Nirmaan with role-based access, student lifecycle workfl
 - Replace placeholder assets in frontend/public.
 - Upload inauguration/trainer/gallery images and videos via /api/media/upload.
 - Update trainer intro links and social assets in frontend content.
+- all are integrated with the erp system
